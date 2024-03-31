@@ -2,21 +2,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <math.h>
 
 #include <pthread.h>
 #include <sched.h>
 #include <time.h>
 #include <semaphore.h>
 
+#include <syslog.h>
 #include <sys/time.h>
 #include <sys/sysinfo.h>
 #include <errno.h>
+
+#include <signal.h>
 #include "syslog.h"
 #include "types.h"
 
-#define NUM_THREADS 4
+#define NUM_THREADS 3
 
-#define ASSIGNMENT 1
+#define ASSIGNMENT 2
 #define COURSE 2
 #define NAME "seqgen"
 
@@ -26,10 +30,31 @@
 #define TRUE (DEF_TRUE)
 #define FALSE (DEF_FALSE)
 
+#define TIMER_HZ (1)
+#define TIMER_PERIOD (30)
+
+#define S1_SEC (2)
+#define S2_SEC (5)
+#define S3_SEC (15)
+
+#define S1_CAPACITY (1)
+#define S2_CAPACITY (1)
+#define S3_CAPACITY (2)
+
 int abortTest = FALSE;
 int abortS1 = FALSE, abortS2 = FALSE, abortS3 = FALSE;
 sem_t semS1, semS2, semS3;
 struct timeval start_time_val;
+
+static unsigned int S1_Ctr = 0;
+static unsigned int S2_Ctr = 0;
+static unsigned int S3_Ctr = 0;
+
+static timer_t PIT;
+static struct itimerspec itime = { {1,0}, {1,0} };
+static struct itimerspec last_itime;
+
+static unsigned long long seqCnt = 0;
 
 typedef struct
 {
@@ -39,7 +64,9 @@ typedef struct
 
 typedef void* (*threadFunc_t)(void*);
 
-void* Sequencer(void* threadp);
+void DoWork(int capacity);
+
+void Sequencer(int id);
 
 void* Service_1(void* threadp);
 void* Service_2(void* threadp);
@@ -52,18 +79,18 @@ void print_scheduler(void);
 void main(void)
 {
     struct timeval current_time_val;
-    int i, rc, scope;
+    int rc, scope, flags = 0;
     cpu_set_t threadcpu;
     pthread_t threads[NUM_THREADS];
     threadParams_t threadParams[NUM_THREADS];
     pthread_attr_t rt_sched_attr[NUM_THREADS];
-    int rt_max_prio, rt_min_prio;
+    unsigned int rt_max_prio, rt_min_prio;
     struct sched_param rt_param[NUM_THREADS];
     struct sched_param main_param;
     pthread_attr_t main_attr;
     pid_t mainpid;
     cpu_set_t allcpuset;
-    threadFunc_t threadFuncs[4] = { Sequencer, Service_1, Service_2, Service_3 };
+    threadFunc_t threadFuncs[NUM_THREADS] = { Service_1, Service_2, Service_3 };
 
     syslog_init(NAME, COURSE, ASSIGNMENT);
 
@@ -78,7 +105,7 @@ void main(void)
 
     CPU_ZERO(&allcpuset);
 
-    for (i = 0; i < NUM_CPU_CORES; i++)
+    for (unsigned int i = 0; i < NUM_CPU_CORES; i++)
         CPU_SET(i, &allcpuset);
 
     // initialize the sequencer semaphores
@@ -86,6 +113,15 @@ void main(void)
     if (sem_init(&semS1, 0, 0)) { printf("Failed to initialize S1 semaphore\n"); exit(-1); }
     if (sem_init(&semS2, 0, 0)) { printf("Failed to initialize S2 semaphore\n"); exit(-1); }
     if (sem_init(&semS3, 0, 0)) { printf("Failed to initialize S3 semaphore\n"); exit(-1); }
+
+    /* Dynamic calculation of counter values of Task Periods for a Timer */
+    S1_Ctr = (unsigned int) floor(((double)TIMER_HZ) / (1 / (double)S1_SEC));
+    S2_Ctr = (unsigned int) floor(((double)TIMER_HZ) / (1 / (double)S2_SEC));
+    S3_Ctr = (unsigned int) floor(((double)TIMER_HZ) / (1 / (double)S3_SEC));
+
+    printf("S1 Ctr: %d \n", S1_Ctr);
+    printf("S1 Ctr: %d \n", S2_Ctr);
+    printf("S1 Ctr: %d \n", S3_Ctr);
 
     mainpid = getpid();
 
@@ -111,9 +147,11 @@ void main(void)
     printf("rt_max_prio=%d\n", rt_max_prio);
     printf("rt_min_prio=%d\n", rt_min_prio);
 
-    threadParams[0].sequencePeriods = 900;
+    threadParams[0].sequencePeriods = S1_CAPACITY;
+    threadParams[1].sequencePeriods = S2_CAPACITY;
+    threadParams[2].sequencePeriods = S3_CAPACITY;
 
-    for (i = 0; i < NUM_THREADS; i++)
+    for (unsigned int i = 0; i < NUM_THREADS; i++)
     {
 
         CPU_ZERO(&threadcpu);
@@ -139,86 +177,64 @@ void main(void)
 
     }
 
+    timer_create(CLOCK_REALTIME, NULL, &PIT);
+
+    signal(SIGALRM, (void(*)()) Sequencer);
+
+    /* 1000ms Periodic Interval Timer (PIT) */
+    itime.it_interval.tv_sec = 1;
+    itime.it_interval.tv_nsec = 0;
+    itime.it_value.tv_sec = 1;
+    itime.it_value.tv_nsec = 0;
+
+    timer_settime(PIT, flags, &itime, &last_itime);
+
     printf("Service threads will run on %d CPU cores\n", CPU_COUNT(&threadcpu));
 
-    for (i = 0; i < NUM_THREADS; i++)
+    for (unsigned int i = 0; i < NUM_THREADS; i++)
         pthread_join(threads[i], NULL);
 
     printf("\nTEST COMPLETE\n");
 }
 
 
-void* Sequencer(void* threadp)
+void Sequencer(int id)
 {
-    struct timeval current_time_val;
-    struct timespec delay_time = { 0,33333333 }; // delay for 33.33 msec, 30 Hz
-    struct timespec remaining_time;
-    double current_time;
-    double residual;
-    int rc, delay_cnt = 0;
-    unsigned long long seqCnt = 0;
-    threadParams_t* threadParams = (threadParams_t*)threadp;
+    int flags = 0;
 
-    gettimeofday(&current_time_val, (struct timezone*)0);
-    SYSLOG_TRACE("Sequencer thread @ sec=%d, msec=%d\n", (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
-    printf("Sequencer thread @ sec=%d, msec=%d\n", (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
-
-    do
+    /* Stop Sequencing Timer */
+    if (abortTest || seqCnt >= TIMER_PERIOD)
     {
-        delay_cnt = 0; residual = 0.0;
+        itime.it_interval.tv_sec = 0;
+        itime.it_interval.tv_nsec = 0;
+        itime.it_value.tv_sec = 0;
+        itime.it_value.tv_nsec = 0;
+        timer_settime(PIT, flags, &itime, &last_itime);
 
-        do
-        {
-            rc = nanosleep(&delay_time, &remaining_time);
+        abortS1 = TRUE; abortS2 = TRUE; abortS3 = TRUE;
+        sem_post(&semS1); sem_post(&semS2); sem_post(&semS3);
 
-            if (rc == EINTR)
-            {
-                residual = remaining_time.tv_sec + ((double)remaining_time.tv_nsec / (double)NANOSEC_PER_SEC);
+        return;
+    }
 
-                if (residual > 0.0) printf("residual=%lf, sec=%d, nsec=%d\n", residual, (int)remaining_time.tv_sec, (int)remaining_time.tv_nsec);
+    printf("Sequencer invoked: Count=%llu\n", seqCnt);
 
-                delay_cnt++;
-            }
-            else if (rc < 0)
-            {
-                perror("Sequencer nanosleep");
-                exit(-1);
-            }
+    // Servcie_1 = RT_MAX-1	@ 0.5 Hz
+    if ((seqCnt % S1_Ctr) == 0) sem_post(&semS1);
 
-        } while ((residual > 0.0) && (delay_cnt < 100));
+    // Service_2 = RT_MAX-2	@ 0.25 Hz
+    if ((seqCnt % S2_Ctr) == 0) sem_post(&semS2);
 
-        gettimeofday(&current_time_val, (struct timezone*)0);
+    // Service_3 = RT_MAX-3	@ 0.142857142 Hz
+    if ((seqCnt % S3_Ctr) == 0) sem_post(&semS3);
 
-        if (delay_cnt > 1) printf("Sequencer looping delay %d\n", delay_cnt);
+    seqCnt++;
 
-
-        // Release each service at a sub-rate of the generic sequencer rate
-
-        // Servcie_1 = RT_MAX-1	@ 0.5 Hz
-        if ((seqCnt % 60) == 0) sem_post(&semS1);
-
-        // Service_2 = RT_MAX-2	@ 0.1 Hz
-        if ((seqCnt % 300) == 0) sem_post(&semS2);
-
-        // Service_3 = RT_MAX-3	@ 0.0667 Hz
-        if ((seqCnt % 500) == 0) sem_post(&semS3);
-
-        seqCnt++;
-
-    } while (!abortTest && (seqCnt < threadParams->sequencePeriods));
-
-    abortS1 = TRUE; abortS2 = TRUE; abortS3 = TRUE;
-    sem_post(&semS1); sem_post(&semS2); sem_post(&semS3);
-
-    pthread_exit((void*)0);
 }
-
-
 
 void* Service_1(void* threadp)
 {
     struct timeval current_time_val;
-    double current_time;
     unsigned long long S1Cnt = 0;
     threadParams_t* threadParams = (threadParams_t*)threadp;
 
@@ -229,9 +245,10 @@ void* Service_1(void* threadp)
             break;
 
         S1Cnt++;
-
+        printf("Service 1 Count = %\n", S1Cnt);
         gettimeofday(&current_time_val, (struct timezone*)0);
         SYSLOG_TRACE("Thread 1 start %llu @ sec=%d, msec=%d on core 0", S1Cnt, (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
+        DoWork(threadParams->sequencePeriods);
     }
 
     pthread_exit((void*)0);
@@ -241,7 +258,6 @@ void* Service_1(void* threadp)
 void* Service_2(void* threadp)
 {
     struct timeval current_time_val;
-    double current_time;
     unsigned long long S2Cnt = 0;
     threadParams_t* threadParams = (threadParams_t*)threadp;
 
@@ -251,9 +267,10 @@ void* Service_2(void* threadp)
         if (abortS2)
             break;
         S2Cnt++;
-
+        printf("Service 2 Count = %\n", S2Cnt);
         gettimeofday(&current_time_val, (struct timezone*)0);
         SYSLOG_TRACE("Thread 2 start %llu @ sec=%d, msec=%d on core 0", S2Cnt, (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
+        DoWork(threadParams->sequencePeriods);
     }
 
     pthread_exit((void*)0);
@@ -262,7 +279,6 @@ void* Service_2(void* threadp)
 void* Service_3(void* threadp)
 {
     struct timeval current_time_val;
-    double current_time;
     unsigned long long S3Cnt = 0;
     threadParams_t* threadParams = (threadParams_t*)threadp;
 
@@ -273,9 +289,11 @@ void* Service_3(void* threadp)
             break;
 
         S3Cnt++;
-
+        printf("Service 3 Count = %\n", S3Cnt);
         gettimeofday(&current_time_val, (struct timezone*)0);
+
         SYSLOG_TRACE("Thread 3 start %llu @ sec=%d, msec=%d on core 0", S3Cnt, (int)(current_time_val.tv_sec - start_time_val.tv_sec), (int)current_time_val.tv_usec / USEC_PER_MSEC);
+        DoWork(threadParams->sequencePeriods);
     }
 
     pthread_exit((void*)0);
@@ -310,4 +328,19 @@ void print_scheduler(void)
     default:
         printf("Pthread Policy is UNKNOWN\n"); exit(-1);
     }
+}
+
+void DoWork(int capacity)
+{
+    volatile unsigned int workCtr = 0;
+
+    /* "Heavy" thread */
+    for (volatile int i = 0; i < capacity; i++)
+    {
+        while (workCtr < 999999)
+        {
+            workCtr++;
+        }
+    }
+    
 }
