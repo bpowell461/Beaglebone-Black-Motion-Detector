@@ -20,7 +20,7 @@
 
 #define NUM_THREADS 4
 
-#define ASSIGNMENT 4
+#define ASSIGNMENT 6
 #define COURSE 2
 #define NAME "seqgen"
 
@@ -32,7 +32,7 @@
 
 #define TIMER_HZ (1)
 #define TIMER_nHZ (0)
-#define TIMER_PERIOD (15)
+#define TIMER_PERIOD (28)
 
 #define S1_SEC (2)
 #define S2_SEC (5)
@@ -78,8 +78,6 @@ void* Service_2(void* threadp);
 void* Service_3(void* threadp);
 void* Service_4(void* threadp);
 
-void* Service(void* threadp);
-
 double getTimeMsec(void);
 void print_scheduler(void);
 
@@ -98,7 +96,7 @@ int main(void)
     pthread_attr_t main_attr;
     pid_t mainpid;
     cpu_set_t allcpuset;
-    threadFunc_t threadFuncs[NUM_THREADS] = { Service_1, Service_2, Service_3, Service_4 };
+    threadFunc_t threadFuncs[NUM_THREADS] = { Service_1, Service_2, Service_3, Service_4};
 
     syslog_init(NAME, COURSE, ASSIGNMENT);
 
@@ -376,6 +374,6 @@ void DoWork(unsigned long long capacity)
         __asm__ __volatile__("");
         gettimeofday(&current_time_val, (struct timezone*)0);
 
-    } while ((current_time_val.tv_sec - start_time_val.tv_sec) >= capacity);
+    } while ((current_time_val.tv_sec - start_time_val.tv_sec) < capacity);
     
 }
