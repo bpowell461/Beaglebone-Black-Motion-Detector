@@ -84,6 +84,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\utils\syslog\syslog.h" />
     <ClInclude Include="..\..\utils\types\types.h" />
+    <ClInclude Include="includes\seqgen.h" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
