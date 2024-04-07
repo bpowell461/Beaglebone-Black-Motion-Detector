@@ -23,5 +23,8 @@
     <ClInclude Include="..\..\utils\syslog\syslog.h">
       <Filter>includes</Filter>
     </ClInclude>
+    <ClInclude Include="includes\seqgen.h">
+      <Filter>includes</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
