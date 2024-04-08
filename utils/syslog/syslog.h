@@ -20,9 +20,9 @@
 #endif
 
 #if defined(DEBUG)
-#define SYSLOG_TRACE(...)  syslog_trace(__VA_ARGS__)
+#define SYS_TRACE(...)  syslog_trace(__VA_ARGS__)
 #else
-#define SYSLOG_TRACE(...)
+#define SYS_TRACE(...)
 #endif
 
 /** 

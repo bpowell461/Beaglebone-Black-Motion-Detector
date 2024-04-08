@@ -1,0 +1,59 @@
+/**
+ * @file ringbuffer.h
+ * @author Brad Powell
+ * @date 08 April 2024
+ * @brief Generic Ring Buffer macros adapted from Phillip Thrasher's C Generic Ring Buffer.
+ *  https://github.com/pthrasher/c-generic-ring-buffer/tree/master
+ *
+ **/
+#ifndef RING_BUFFER_H_
+#define RING_BUFFER_H_
+
+#include "types.h"
+
+#define ringbuffer_typedef (TYPE, NAME) \
+typedef struct \
+{ \
+    TYPE        *data;\
+    UINT16      size;   \
+    UINT16      readPtr; \
+    UINT16      writePtr; \
+}NAME;
+
+typedef enum
+{
+    BUFFER_EMPTY,
+    BUFFER_FULL,
+    BUFFER_NONE
+}buffer_state_e;
+
+#define ringbuffer_init(BUF, TYPE, SIZE) \
+    do {\
+    { \
+        static TYPE buffer[SIZE];\
+        BUF.elems = buffer; \
+    } \
+    BUF.size = SIZE; \
+    BUF.writePtr = 0; \
+    BUF.readPtr = 0; \
+    } while(0)
+
+#define ringbuffer_write(BUF, DATA) \
+    do { \
+        BUF->data[BUF->writePtr] = DATA; \
+        BUF->writePtr = (BUF->writePtr + 1) & (BUF->size - 1); \
+    }while(0) 
+
+#define ringbuffer_read(BUF, DATA) \
+    do { \
+        DATA = BUF->data[BUF->readPtr]; \
+        BUF->readPtr = (BUF->readPtr + 1) & (BUF->size - 1); \
+    }while(0)
+
+#define ringbuffer_canwrite(BUF, DATA) ((BUF->size - ringbuffer_getlen(BUF)) >= sizeof(DATA))
+
+#define ringbuffer_getlen(BUF)  ((BUF->writePtr - BUF->readPtr) & (BUF->size - 1))
+#define ringbuffer_isEmpty(BUF) (BUF->readPtr == BUF->writePtr)
+#define ringbuffer_isFull(BUF)  (ringbuffer_getlen(BUF) == (BUF->size - 1))
+
+#endif /* RING_BUFFER_H_ */
