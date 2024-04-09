@@ -11,14 +11,6 @@
 
 #include "types.h"
 
-#if defined(BEAGLEBONE)
-#define PLATFORM "beaglebone"
-#elif defined(RASPBERRYPI)
-#define PLATFORM "raspberrypi"
-#else
-#error "No platform defined!"
-#endif
-
 #if defined(DEBUG)
 #define SYS_TRACE(...)  syslog_trace(__VA_ARGS__)
 #else

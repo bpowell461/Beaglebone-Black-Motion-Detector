@@ -69,6 +69,8 @@ sys_result_e osal_init(void)
         return SYS_FAILURE;
     }
 
+    os_initialized = DEF_TRUE;
+
     return SYS_SUCCESS;
 }
 
@@ -111,9 +113,11 @@ sys_result_e osal_task_create(osal_id_t *id, char* name, osal_stack_t stack, osa
     osal_task_tcb[task_idx].task_func = task_func;
     osal_task_tcb[task_idx].task_args = args;
 
+    osal_task_start_args_t start_args = { *id, args };
+
     osal_sem_init(&osal_task_signals[task_idx]);
 
-    res = pthread_create(&osal_task_tcb[task_idx].task_handle, &attr, task_func, args);
+    res = pthread_create(&osal_task_tcb[task_idx].task_handle, &attr, task_func, (void *)&start_args);
     if (!CHECK_ERROR(res))
     {
         pthread_join(osal_task_tcb[task_idx].task_handle, NULL);
@@ -152,12 +156,6 @@ sys_result_e osal_task_suspend(osal_id_t id)
     int ret = osal_sem_wait(&osal_task_signals[id]);
 
     return CHECK_ERROR(ret);
-}
-
-sys_result_e osal_buffer_put(void)
-{
-    if (!os_initialized)
-        return SYS_FAILURE;
 }
 
 sys_result_e osal_mutex_init(osal_mutex_t *mutex, osal_mutex_attr_e attr)

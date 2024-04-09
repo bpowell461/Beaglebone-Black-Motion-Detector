@@ -11,14 +11,13 @@
 
 #include "types.h"
 
-#define ringbuffer_typedef (TYPE, NAME) \
-typedef struct \
-{ \
-    TYPE        *data;\
-    UINT16      size;   \
-    UINT16      readPtr; \
-    UINT16      writePtr; \
-}NAME;
+#define ringbuffer_typedef(TYPE, NAME) \
+    typedef struct { \
+        TYPE        *data;\
+        UINT16      size; \
+        UINT16      readPtr; \
+        UINT16      writePtr; \
+    } NAME
 
 typedef enum
 {
@@ -31,7 +30,7 @@ typedef enum
     do {\
     { \
         static TYPE buffer[SIZE];\
-        BUF.elems = buffer; \
+        BUF.data = buffer; \
     } \
     BUF.size = SIZE; \
     BUF.writePtr = 0; \

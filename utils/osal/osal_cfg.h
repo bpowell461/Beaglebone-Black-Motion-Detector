@@ -9,6 +9,16 @@
 #ifndef OSAL_CFG_H_
 #define OSAL_CFG_H_
 
+#if defined(BEAGLEBONE)
+#define PLATFORM "beaglebone"
+#define NUM_CPU_CORES (1)
+#elif defined(RASPBERRYPI)
+#define PLATFORM "raspberrypi"
+#define NUM_CPU_CORES (4)
+#else
+#error "No platform defined!"
+#endif
+
 /* Hook your OS here */
 #include <pthread.h>
 #include <semaphore.h>
@@ -19,9 +29,6 @@
 typedef pthread_mutex_t     osal_mutex_t;
 typedef sem_t               osal_sem_t;
 typedef pthread_t           osal_task_t;
-
-/* Application Specific Hooks */
-typedef buffer_t        osal_buffer_t;
 
 /* Configuration Types */
 typedef UINT08 osal_id_t;
@@ -34,6 +41,12 @@ typedef struct
     UINT08  priority;
     UINT08  subpriority;
 }osal_priority_t;
+
+typedef struct
+{
+    osal_id_t task_id;
+    void *args;
+}osal_task_start_args_t;
 
 typedef enum
 {
