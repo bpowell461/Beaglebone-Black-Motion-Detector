@@ -16,9 +16,6 @@
 #include "camera_cfg.h"
 
 /** Macros **/
-
-/* TASK RATE: 1Hz */ 
-#define TASK_RATE_MSEC  (1 * MSEC_PER_SEC)
 #define MAX_WRITE_ERRORS (5u)
 
 /** Type Definitions **/
@@ -30,7 +27,6 @@ typedef enum
 }camera_state_e;
 
 /** Static Variables **/
-static const UINT32 task_rate_msec = TASK_RATE_MSEC;
 static INT32 camera_fd;
 static UINT08 write_errors = 0;
 
@@ -83,8 +79,6 @@ void *camera_task(void *threadp)
     osal_id_t id = args.task_id;
 
     SYS_TRACE("Camera Task Waiting for Start...");
-
-    osal_task_set_period(id, task_rate_msec);
 
     osal_task_wait_start(id);
 

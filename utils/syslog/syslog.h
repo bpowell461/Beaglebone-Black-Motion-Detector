@@ -19,7 +19,7 @@
         #define SYS_TRACE(...)  syslog_trace(__VA_ARGS__)
     #endif
 #else
-#define SYS_TRACE(...)
+#define SYS_TRACE(...) {}
 #endif
 
 /** 

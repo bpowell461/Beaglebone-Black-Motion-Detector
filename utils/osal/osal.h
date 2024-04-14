@@ -11,13 +11,14 @@
 
 #include <unistd.h>
 #include "osal_cfg.h"
+#include "osal_tasks_cfg.h"
 #include "types.h"
 
 sys_result_e osal_init(void);
 
 sys_result_e osal_deinit(void);
 
-sys_result_e osal_task_create(osal_id_t *id, char *name, osal_stack_t stack, osal_priority_t priority, osal_func task_func, void *args);
+sys_result_e osal_task_create(osal_id_t *id, char *name, osal_stack_t stack, osal_priority_t priority, osal_func task_func, UINT32 period_ms, void *args);
 
 sys_result_e osal_task_start(osal_id_t id);
 

@@ -66,7 +66,7 @@ static int rt_max_prio;
 static int rt_min_prio;
 static pid_t mainpid;
 
-static void osal_task_generic_sequencer(const int signal);
+static void osal_task_generic_sequencer(const INT32 signal);
 
 sys_result_e osal_init(void)
 {
@@ -147,7 +147,7 @@ sys_result_e osal_deinit(void)
     return SYS_SUCCESS;
 }
 
-sys_result_e osal_task_create(osal_id_t *id, char* name, osal_stack_t stack, osal_priority_t priority, osal_func task_func, void* args)
+sys_result_e osal_task_create(osal_id_t *id, char* name, osal_stack_t stack, osal_priority_t priority, osal_func task_func, UINT32 period_ms, void* args)
 {
     if (!os_initialized)
         return SYS_FAILURE;
@@ -200,6 +200,8 @@ sys_result_e osal_task_create(osal_id_t *id, char* name, osal_stack_t stack, osa
         SYS_TRACE("ERR: CREATE TASK");
         goto cleanup;
     }
+
+    osal_task_set_period(task_idx, period_ms);
 
     if (scheduler_started)
     {

@@ -32,6 +32,8 @@ static UINT16 frameIdx = 0;
 
 static UINT08 writePtr = 0;
 
+static struct timeval select_timeout;
+
 static osal_mutex_t mtx;
 
 static sys_result_e framebuffer_ioctl(INT32 fd, INT32 request, void *arg);
@@ -54,6 +56,9 @@ sys_result_e framebuffer_init(INT32 *fd)
     {
         buffers[i].size = framebuffer_mapbuffers(i, &buffers[i].start);
     }
+
+    select_timeout.tv_sec = 0;
+    select_timeout.tv_usec = (5 * USEC_PER_MSEC);
 
     return SYS_SUCCESS;
 }
@@ -81,7 +86,7 @@ sys_result_e framebuffer_getframe(INT32 fd)
 
     FD_ZERO(&fds);
     FD_SET(fd, &fds);
-    int r = select(fd + 1, &fds, NULL, NULL, NULL);
+    int r = select(fd + 1, &fds, NULL, NULL, &select_timeout);
     if (-1 == r) {
         return SYS_IGNORE;
     }

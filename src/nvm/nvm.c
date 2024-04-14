@@ -7,13 +7,9 @@
 
 /** Macros **/
 
-/* TASK RATE: 0.33Hz  */
-#define TASK_RATE_MSEC      (3 * MSEC_PER_SEC)
-
 /** Type Definitions **/
 
 /** Static Variables **/
-static const UINT32 task_rate_msec = TASK_RATE_MSEC;
 static INT32 nvm_fd;
 
 /** Global Variables **/
@@ -32,8 +28,6 @@ void *nvm_task(void *threadp)
     osal_id_t id = args.task_id;
 
     SYS_TRACE("NVM Task Waiting for Start...");
-
-    osal_task_set_period(id, task_rate_msec);
 
     osal_task_wait_start(id);
 
