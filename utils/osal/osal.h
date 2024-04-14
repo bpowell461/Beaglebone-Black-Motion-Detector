@@ -49,7 +49,7 @@ void osal_task_set_period(osal_id_t id, UINT32 period_ms);
 
 UINT32 osal_task_wait_all(void);
 
-sys_result_e osal_task_wait_id(osal_id_t id);
+sys_result_e osal_task_wait(osal_id_t id);
 
 sys_result_e osal_start_scheduler(void);
 

@@ -48,6 +48,7 @@ typedef struct
 }osal_sequencer_t;
 
 static BOOL_T os_initialized = DEF_FALSE;
+static BOOL_T scheduler_started = DEF_FALSE;
 
 static osal_task_tcb_t osal_task_tcb[MAX_TASKS];
 static osal_sequencer_t osal_task_sequencers[MAX_TASKS];
@@ -58,8 +59,8 @@ static struct itimerspec oitval;
 
 static UINT08 task_idx = 0;
 
-static osal_mutex_t os_task_mutex;
-static osal_mutex_t os_timer_mutex;
+static osal_mutex_t os_tcb_mutex;
+static osal_mutex_t os_sched_mutex;
 
 static int rt_max_prio;
 static int rt_min_prio;
@@ -103,12 +104,12 @@ sys_result_e osal_init(void)
 
     os_initialized = DEF_TRUE;
 
-    if (SYS_SUCCESS != osal_mutex_init(&os_task_mutex, OSAL_MTX_PRIO_CEILING))
+    if (SYS_SUCCESS != osal_mutex_init(&os_tcb_mutex, OSAL_MTX_PRIO_CEILING))
     {
         return SYS_FAILURE;
     }
 
-    if (SYS_SUCCESS != osal_mutex_init(&os_timer_mutex, OSAL_MTX_PRIO_CEILING))
+    if (SYS_SUCCESS != osal_mutex_init(&os_sched_mutex, OSAL_MTX_PRIO_CEILING))
     {
         return SYS_FAILURE;
     }
@@ -137,9 +138,9 @@ sys_result_e osal_deinit(void)
 
     timer_delete(osal_task_timer);
 
-    osal_mutex_delete(&os_task_mutex);
+    osal_mutex_delete(&os_tcb_mutex);
 
-    osal_mutex_delete(&os_timer_mutex);
+    osal_mutex_delete(&os_sched_mutex);
 
     os_initialized = DEF_FALSE;
 
@@ -176,7 +177,7 @@ sys_result_e osal_task_create(osal_id_t *id, char* name, osal_stack_t stack, osa
     pthread_attr_setschedparam(&attr, &sp);
 
     /* CRITICAL SECTION */
-    osal_mutex_lock(&os_task_mutex);
+    osal_mutex_lock(&os_tcb_mutex);
 
     *id = task_idx;
     osal_task_tcb[task_idx].task_id = *id;
@@ -186,18 +187,33 @@ sys_result_e osal_task_create(osal_id_t *id, char* name, osal_stack_t stack, osa
     osal_task_tcb[task_idx].task_func = task_func;
     osal_task_tcb[task_idx].task_args = (osal_task_start_args_t){ task_idx, args};
 
-    osal_sem_init(&osal_task_sequencers[task_idx].signal_sem);
+    res = osal_sem_init(&osal_task_sequencers[task_idx].signal_sem);
+    if (IS_ERROR(res))
+    {
+        SYS_TRACE("ERR: TASK SEM INIT");
+        goto cleanup;
+    }
 
     res = pthread_create(&osal_task_tcb[task_idx].task_handle, &attr, task_func, (void *)&osal_task_tcb[task_idx].task_args);
     if (IS_ERROR(res))
     {
         SYS_TRACE("ERR: CREATE TASK");
-        return SYS_FAILURE;
+        goto cleanup;
     }
 
+    if (scheduler_started)
+    {
+        osal_task_start(task_idx);
+    }
+    else
+    {
+        osal_task_sequencers[task_idx].task_state = TASKSTATE_SUSPENDED;
+    }
+    
     task_idx++;
 
-    osal_mutex_unlock(&os_task_mutex);
+cleanup: 
+    osal_mutex_unlock(&os_tcb_mutex);
     /* END CRITICAL SECTION */
 
     pthread_attr_destroy(&attr);
@@ -210,16 +226,19 @@ sys_result_e osal_task_start(osal_id_t id)
     if (!os_initialized)
         return SYS_FAILURE;
 
+    osal_mutex_lock(&os_sched_mutex);
     if (SYS_SUCCESS != osal_sem_signal(&osal_task_sequencers[id].signal_sem))
     {
+        osal_mutex_unlock(&os_sched_mutex);
         SYS_TRACE("ERR: TASK START (%s)", osal_task_tcb[id].task_name);
         return SYS_FAILURE;
     }
 
-    SYS_TRACE("Starting task (%s)", osal_task_tcb[id].task_name);
-
     osal_task_sequencers[task_idx].task_state = TASKSTATE_RUNNING;
 
+    osal_mutex_unlock(&os_sched_mutex);
+
+    SYS_TRACE("Starting task (%s)", osal_task_tcb[id].task_name);
     return SYS_SUCCESS;
 }
 
@@ -229,7 +248,7 @@ sys_result_e osal_task_delete(osal_id_t id, BOOL_T force)
         return SYS_FAILURE;
 
     /* CRITICAL SECTION */
-    osal_mutex_lock(&os_task_mutex);
+    osal_mutex_lock(&os_tcb_mutex);
 
     if (force)
         pthread_cancel(osal_task_tcb[id].task_handle);
@@ -243,7 +262,7 @@ sys_result_e osal_task_delete(osal_id_t id, BOOL_T force)
     osal_task_tcb[id].task_args = (osal_task_start_args_t){ 0, 0 };
     osal_task_sequencers[id].task_state = TASKSTATE_UNUSED;
 
-    osal_mutex_unlock(&os_task_mutex);
+    osal_mutex_unlock(&os_tcb_mutex);
     /* END CRITICAL SECTION */
     
     return SYS_SUCCESS;
@@ -254,7 +273,10 @@ sys_result_e osal_task_suspend(osal_id_t id)
     if (!os_initialized)
         return SYS_FAILURE;
 
+    osal_mutex_lock(&os_sched_mutex);
     osal_task_sequencers[id].task_state = TASKSTATE_SUSPENDED;
+    osal_mutex_unlock(&os_sched_mutex);
+
     return osal_sem_wait(&osal_task_sequencers[id].signal_sem);
 }
 
@@ -379,19 +401,19 @@ void osal_task_wait_start(osal_id_t id)
 
 void osal_task_delay(osal_id_t id)
 {
-    osal_sem_wait(&osal_task_sequencers[id].signal_sem);
+    osal_task_suspend(id);
 }
 
 void osal_task_set_period(osal_id_t id, UINT32 period_ms)
 {
-    osal_mutex_lock(&os_timer_mutex);
+    osal_mutex_lock(&os_sched_mutex);
     if (TASKSTATE_UNUSED != osal_task_sequencers[id].task_state)
     {
         /* REQ: Period must be a multiple of timer tick and >= the timer tick resolution */
         osal_task_sequencers[id].period_ms = period_ms;
         osal_task_sequencers[id].period_cnts = (period_ms / TIMER_TICK_MS);
     }
-    osal_mutex_unlock(&os_timer_mutex);
+    osal_mutex_unlock(&os_sched_mutex);
 }
 
 UINT32 osal_task_wait_all(void)
@@ -405,15 +427,14 @@ UINT32 osal_task_wait_all(void)
             {
                 pthread_join(osal_task_tcb[i].task_handle, NULL);
                 runningTasks++;
-            }
-                
+            }    
         } 
     }
 
     return runningTasks;
 }
 
-sys_result_e osal_task_wait_id(osal_id_t id)
+sys_result_e osal_task_wait(osal_id_t id)
 {
     if (os_initialized)
     {
@@ -432,6 +453,10 @@ sys_result_e osal_start_scheduler(void)
     if (!os_initialized)
         return SYS_FAILURE;
 
+    INT32 ret;
+
+    osal_mutex_lock(&os_sched_mutex);
+
     itval.it_interval.tv_sec = 0;
     itval.it_interval.tv_nsec = (TIMER_TICK_MS * USEC_PER_MSEC * NSEC_PER_SEC);
     itval.it_value.tv_sec = 0;
@@ -439,21 +464,35 @@ sys_result_e osal_start_scheduler(void)
 
     signal(SIGALRM, (void(*)()) osal_task_generic_sequencer);
 
-    return IS_ERROR(timer_settime(osal_task_timer, 0, &itval, &oitval));
+    ret = timer_settime(osal_task_timer, 0, &itval, &oitval);
+
+    scheduler_started = DEF_TRUE;
+
+    osal_mutex_unlock(&os_sched_mutex);
+
+    return IS_ERROR(ret);
 }
 sys_result_e osal_stop_scheduler(void)
 {
     if (!os_initialized)
         return SYS_SUCCESS;
 
+    INT32 ret;
+
+    osal_mutex_lock(&os_sched_mutex);
+
     itval.it_interval.tv_sec = 0;
     itval.it_interval.tv_nsec = 0;
     itval.it_value.tv_sec = 0;
     itval.it_value.tv_nsec = 0;
 
+    ret = timer_settime(osal_task_timer, 0, &itval, &oitval);
+
     signal(SIGALRM, SIG_DFL);
 
-    return IS_ERROR(timer_settime(osal_task_timer, 0, &itval, &oitval));
+    osal_mutex_unlock(&os_sched_mutex);
+
+    return IS_ERROR(ret);
 }
 
 static void osal_task_generic_sequencer(UINT32 id)
@@ -462,13 +501,13 @@ static void osal_task_generic_sequencer(UINT32 id)
 
     for (UINT32 i = 0; i < MAX_TASKS; i++)
     {
-        osal_mutex_lock(&os_timer_mutex);
+        osal_mutex_lock(&os_sched_mutex);
         if (TASKSTATE_UNUSED != osal_task_sequencers[i].task_state)
         {
             if ((cnt % osal_task_sequencers[i].period_cnts) == 0)
                 osal_sem_signal(&osal_task_sequencers[i].signal_sem);
         }
-        osal_mutex_unlock(&os_timer_mutex);
+        osal_mutex_unlock(&os_sched_mutex);
     }
 
     cnt++;
