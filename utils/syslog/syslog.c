@@ -18,7 +18,6 @@
 
 /* Macros Defines */
 #define USE_TRACE 1
-#define LOG_AND_PRINT
 
 #define NULL_TERM_SIZE          (1u)
 #define MONTH_SIZE              (3u)
@@ -150,10 +149,6 @@ void syslog_trace(const char *msg, ...)
         va_list argp;
         va_start(argp, msg);
 
-#if defined(LOG_AND_PRINT)
-        printf(msg, argp);
-#endif
-
         /* For now we are appending a newline character */
         if ('\n' != msg[strlen(msg)])
         {
@@ -169,6 +164,25 @@ void syslog_trace(const char *msg, ...)
 
     }
     
+}
+
+void syslog_print(const char *msg, ...)
+{
+    va_list argp;
+    va_start(argp, msg);
+
+    /* For now we are appending a newline character */
+    if ('\n' != msg[strlen(msg)])
+    {
+        char formatted_msg[256];
+        snprintf(formatted_msg, sizeof(formatted_msg), "%s\n", msg);
+        vprintf(formatted_msg, argp);
+    }
+    else
+    {
+        vprintf(msg, argp);
+    }
+    va_end(argp);
 }
 
 static int trace_write(const char *msg , ...)

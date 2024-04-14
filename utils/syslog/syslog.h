@@ -10,9 +10,14 @@
 #define SYS_LOG_H_
 
 #include "types.h"
+#define LOG_AND_PRINT
 
 #if defined(DEBUG)
-#define SYS_TRACE(...)  syslog_trace(__VA_ARGS__)
+    #if defined(LOG_AND_PRINT)
+        #define SYS_TRACE(...) syslog_trace(__VA_ARGS__);  syslog_print(__VA_ARGS__)
+    #else
+        #define SYS_TRACE(...)  syslog_trace(__VA_ARGS__)
+    #endif
 #else
 #define SYS_TRACE(...)
 #endif
@@ -41,12 +46,20 @@ sys_result_e syslog_close(void);
 void syslog_printheader(void);
 
 /**
-* Prints the System Log Header.
+* Logs a system statement.
 * @param msg - string to be printed
 * @param varargs - variable amount of args
 * @return None
 */
 void syslog_trace(const char* msg, ...);
+
+/**
+* Prints a system statement.
+* @param msg - string to be printed
+* @param varargs - variable amount of args
+* @return None
+*/
+void syslog_print(const char *msg, ...);
 
 
 
