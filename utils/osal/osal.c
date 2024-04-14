@@ -31,12 +31,20 @@ typedef struct
     osal_task_t             task_handle;
 }osal_task_tcb_t;
 
+typedef enum
+{
+    TASKSTATE_UNUSED,
+    TASKSTATE_RUNNING,
+    TASKSTATE_SUSPENDED,
+    TASKSTATE_COUNT
+}osal_task_state_e;
+
 typedef struct
 {
     UINT32 period_ms;
     UINT32 period_cnts;
     osal_sem_t signal_sem;
-    BOOL_T isTaskRunning;
+    osal_task_state_e task_state;
 }osal_sequencer_t;
 
 static BOOL_T os_initialized = DEF_FALSE;
@@ -84,23 +92,14 @@ sys_result_e osal_init(void)
     for (UINT32 i = 0; i < MAX_TASKS; i++)
     {
         osal_task_tcb[i].task_func = DEF_NULL_PTR;
-        osal_task_sequencers[i].isTaskRunning = DEF_FALSE;
+        osal_task_sequencers[i].task_state = TASKSTATE_UNUSED;
     }
-
-    itval.it_interval.tv_sec = 0;
-    itval.it_interval.tv_nsec = (TIMER_TICK_MS * USEC_PER_MSEC * NSEC_PER_SEC);
-    itval.it_value.tv_sec = 0;
-    itval.it_value.tv_nsec = (TIMER_TICK_MS * USEC_PER_MSEC * NSEC_PER_SEC);
 
     rc = timer_create(CLOCK_MONOTONIC, NULL, &osal_task_timer);
     if (IS_ERROR(rc))
     {
         return SYS_FAILURE;
     }
-
-    signal(SIGALRM, (void(*)()) osal_task_generic_sequencer);
-
-    timer_settime(osal_task_timer, 0, &itval, &oitval);
 
     os_initialized = DEF_TRUE;
 
@@ -122,7 +121,7 @@ sys_result_e osal_deinit(void)
     if (!os_initialized)
         return SYS_SUCCESS;
 
-    for (UINT32 i = 0; i < MAX_TASKS; i++)
+    for (osal_id_t i = 0; i < MAX_TASKS; i++)
     {
         osal_task_delete(i, DEF_TRUE);
     }
@@ -217,7 +216,9 @@ sys_result_e osal_task_start(osal_id_t id)
         return SYS_FAILURE;
     }
 
-    osal_task_sequencers[task_idx].isTaskRunning = DEF_TRUE;
+    SYS_TRACE("Starting task (%s)", osal_task_tcb[id].task_name);
+
+    osal_task_sequencers[task_idx].task_state = TASKSTATE_RUNNING;
 
     return SYS_SUCCESS;
 }
@@ -230,17 +231,17 @@ sys_result_e osal_task_delete(osal_id_t id, BOOL_T force)
     /* CRITICAL SECTION */
     osal_mutex_lock(&os_task_mutex);
 
-    osal_task_tcb[id].task_name = "";
-    osal_task_tcb[id].task_stack = 0;
-    osal_task_tcb[id].task_priority = (osal_priority_t){0, 0};
-    osal_task_tcb[id].task_func = DEF_NULL_PTR;
-    osal_task_tcb[id].task_args = (osal_task_start_args_t){0, 0};
-    osal_task_sequencers[id].isTaskRunning = DEF_FALSE;
-
     if (force)
         pthread_cancel(osal_task_tcb[id].task_handle);
     else
         pthread_exit(DEF_NULL_PTR);
+
+    osal_task_tcb[id].task_name = "";
+    osal_task_tcb[id].task_stack = 0;
+    osal_task_tcb[id].task_priority = (osal_priority_t){ 0, 0 };
+    osal_task_tcb[id].task_func = DEF_NULL_PTR;
+    osal_task_tcb[id].task_args = (osal_task_start_args_t){ 0, 0 };
+    osal_task_sequencers[id].task_state = TASKSTATE_UNUSED;
 
     osal_mutex_unlock(&os_task_mutex);
     /* END CRITICAL SECTION */
@@ -253,7 +254,7 @@ sys_result_e osal_task_suspend(osal_id_t id)
     if (!os_initialized)
         return SYS_FAILURE;
 
-    osal_task_sequencers[id].isTaskRunning = DEF_FALSE;
+    osal_task_sequencers[id].task_state = TASKSTATE_SUSPENDED;
     return osal_sem_wait(&osal_task_sequencers[id].signal_sem);
 }
 
@@ -384,7 +385,7 @@ void osal_task_delay(osal_id_t id)
 void osal_task_set_period(osal_id_t id, UINT32 period_ms)
 {
     osal_mutex_lock(&os_timer_mutex);
-    if (osal_task_sequencers[id].isTaskRunning)
+    if (TASKSTATE_UNUSED != osal_task_sequencers[id].task_state)
     {
         /* REQ: Period must be a multiple of timer tick and >= the timer tick resolution */
         osal_task_sequencers[id].period_ms = period_ms;
@@ -395,13 +396,12 @@ void osal_task_set_period(osal_id_t id, UINT32 period_ms)
 
 UINT32 osal_task_wait_all(void)
 {
-    INT32 runningTasks = 0;
+    UINT32 runningTasks = 0;
     if (os_initialized)
     {
-        /* We make the assumption that the 0th index is the bootstrap thread which we won't wait on */
-        for (UINT32 i = 1; i < MAX_TASKS; i++)
+        for (UINT32 i = 0; i < MAX_TASKS; i++)
         {
-            if (osal_task_sequencers[i].isTaskRunning)
+            if (TASKSTATE_UNUSED != osal_task_sequencers[i].task_state)
             {
                 pthread_join(osal_task_tcb[i].task_handle, NULL);
                 runningTasks++;
@@ -417,7 +417,7 @@ sys_result_e osal_task_wait_id(osal_id_t id)
 {
     if (os_initialized)
     {
-        if (osal_task_sequencers[id].isTaskRunning)
+        if (TASKSTATE_UNUSED != osal_task_sequencers[id].task_state)
         {
             pthread_join(osal_task_tcb[id].task_handle, NULL);
             return SYS_SUCCESS;
@@ -427,18 +427,49 @@ sys_result_e osal_task_wait_id(osal_id_t id)
     return SYS_FAILURE;
 }
 
+sys_result_e osal_start_scheduler(void)
+{
+    if (!os_initialized)
+        return SYS_FAILURE;
+
+    itval.it_interval.tv_sec = 0;
+    itval.it_interval.tv_nsec = (TIMER_TICK_MS * USEC_PER_MSEC * NSEC_PER_SEC);
+    itval.it_value.tv_sec = 0;
+    itval.it_value.tv_nsec = (TIMER_TICK_MS * USEC_PER_MSEC * NSEC_PER_SEC);
+
+    signal(SIGALRM, (void(*)()) osal_task_generic_sequencer);
+
+    return IS_ERROR(timer_settime(osal_task_timer, 0, &itval, &oitval));
+}
+sys_result_e osal_stop_scheduler(void)
+{
+    if (!os_initialized)
+        return SYS_SUCCESS;
+
+    itval.it_interval.tv_sec = 0;
+    itval.it_interval.tv_nsec = 0;
+    itval.it_value.tv_sec = 0;
+    itval.it_value.tv_nsec = 0;
+
+    signal(SIGALRM, SIG_DFL);
+
+    return IS_ERROR(timer_settime(osal_task_timer, 0, &itval, &oitval));
+}
+
 static void osal_task_generic_sequencer(UINT32 id)
 {
     static unsigned long long cnt = 0;
 
     for (UINT32 i = 0; i < MAX_TASKS; i++)
     {
-        osal_mutex_lock(&os_task_mutex);
-        if (osal_task_sequencers[i].isTaskRunning)
+        osal_mutex_lock(&os_timer_mutex);
+        if (TASKSTATE_UNUSED != osal_task_sequencers[i].task_state)
         {
-            if ((cnt % osal_task_sequencers[i].period_ms) == 0)
+            if ((cnt % osal_task_sequencers[i].period_cnts) == 0)
                 osal_sem_signal(&osal_task_sequencers[i].signal_sem);
         }
-        osal_mutex_unlock(&os_task_mutex);
+        osal_mutex_unlock(&os_timer_mutex);
     }
+
+    cnt++;
 }

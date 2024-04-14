@@ -108,8 +108,6 @@ void *camera_task(void *threadp)
     SYS_TRACE("Camera Task Exiting...");
     camera_capturestate(eCAMERA_OFF);
     osal_task_delete(id, DEF_FALSE);
-
-    return NULL;
 }
 
 static sys_result_e camera_capturestate(camera_state_e state)

@@ -51,4 +51,8 @@ UINT32 osal_task_wait_all(void);
 
 sys_result_e osal_task_wait_id(osal_id_t id);
 
+sys_result_e osal_start_scheduler(void);
+
+sys_result_e osal_stop_scheduler(void);
+
 #endif // OSAL_H_

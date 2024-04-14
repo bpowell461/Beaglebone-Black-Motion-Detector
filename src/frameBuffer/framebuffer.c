@@ -82,8 +82,6 @@ sys_result_e framebuffer_getframe(INT32 fd)
 {
     struct v4l2_buffer buf = { 0 };
     fd_set fds;
-    char out_name[256];
-    INT32 ret;
 
     FD_ZERO(&fds);
     FD_SET(fd, &fds);

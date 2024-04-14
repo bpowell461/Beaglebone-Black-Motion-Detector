@@ -56,6 +56,4 @@ void *nvm_task(void *threadp)
     framebuffer_deinit();
 
     osal_task_delete(id, DEF_FALSE);
-
-    return NULL;
 } 
