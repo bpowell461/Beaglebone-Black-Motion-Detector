@@ -9,7 +9,9 @@
 #ifndef OSAL_H_
 #define OSAL_H_
 
+#include <unistd.h>
 #include "osal_cfg.h"
+#include "types.h"
 
 sys_result_e osal_init(void);
 
@@ -34,5 +36,10 @@ sys_result_e osal_sem_signal(osal_sem_t *sem);
 sys_result_e osal_sem_wait(osal_sem_t *sem); 
 
 void osal_task_wait_start(osal_id_t id);
+
+static inline void osal_task_delay(UINT32 delay)
+{
+    usleep(delay);
+}
 
 #endif // OSAL_H_

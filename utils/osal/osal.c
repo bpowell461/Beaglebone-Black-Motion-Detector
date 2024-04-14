@@ -7,7 +7,7 @@
  */
 #define _GNU_SOURCE
 #include "osal.h"
-#include "pthread.h"
+#include <pthread.h>
 #include <sched.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -97,10 +97,10 @@ sys_result_e osal_task_create(osal_id_t *id, char* name, osal_stack_t stack, osa
 
     res = pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
     res = pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
-    res = pthread_attr_setaffinity_np(&sp, sizeof(cpu_set_t), &threadcpu);
+    res = pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &threadcpu);
 
     sp.sched_priority = priority.priority;
-    pthread_attr_setschedparam(&sp, &attr);
+    pthread_attr_setschedparam(&attr, &sp);
 
     /* CRITICAL SECTION */
     osal_mutex_lock(&os_task_mutex);
@@ -117,10 +117,10 @@ sys_result_e osal_task_create(osal_id_t *id, char* name, osal_stack_t stack, osa
 
     osal_sem_init(&osal_task_signals[task_idx]);
 
-    res = pthread_create(&osal_task_tcb[task_idx].task_handle, &attr, task_func, (void *)&start_args);
+    res = pthread_create(osal_task_tcb[task_idx].task_handle, &attr, task_func, (void *)&start_args);
     if (!CHECK_ERROR(res))
     {
-        pthread_join(osal_task_tcb[task_idx].task_handle, NULL);
+        pthread_join(*osal_task_tcb[task_idx].task_handle, NULL);
         task_idx++;
     }
 
@@ -146,6 +146,22 @@ sys_result_e osal_task_delete(osal_id_t id)
 {
     if (!os_initialized)
         return SYS_FAILURE;
+
+    /* CRITICAL SECTION */
+    osal_mutex_lock(&os_task_mutex);
+
+    osal_task_tcb[id].task_name = "";
+    osal_task_tcb[id].task_stack = 0;
+    osal_task_tcb[id].task_priority = (osal_priority_t){0, 0};
+    osal_task_tcb[id].task_func = DEF_NULL_PTR;
+    osal_task_tcb[id].task_args = DEF_NULL_PTR;
+
+    pthread_exit(NULL);
+
+    osal_mutex_unlock(&os_task_mutex);
+    /* END CRITICAL SECTION */
+    
+    return SYS_SUCCESS;
 }
 
 sys_result_e osal_task_suspend(osal_id_t id)
@@ -202,6 +218,8 @@ sys_result_e osal_mutex_init(osal_mutex_t *mutex, osal_mutex_attr_e attr)
         pthread_mutex_init(mutex, &pthread_mtx);
 
     pthread_mutexattr_destroy(&pthread_mtx);
+
+    return SYS_SUCCESS;
 }
 
 sys_result_e osal_mutex_lock(osal_mutex_t *mutex)
@@ -253,9 +271,9 @@ sys_result_e osal_sem_wait(osal_sem_t *sem)
 
 void osal_task_wait_start(osal_id_t id)
 {
-    int sval, ret;
+    int sval;
 
-    ret = sem_getvalue(&osal_task_signals[id], &sval);
+    sem_getvalue(&osal_task_signals[id], &sval);
     if (sval < 0)
     {
         osal_sem_wait(&osal_task_signals[id]);

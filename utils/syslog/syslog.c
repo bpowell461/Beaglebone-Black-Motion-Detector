@@ -6,7 +6,6 @@
  *
  */
 
-#include "syslog.h"
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
@@ -14,6 +13,8 @@
 #include <stdarg.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include "syslog.h"
+#include "utils.h"
 
 /* Macros Defines */
 #define USE_TRACE 1
@@ -109,7 +110,7 @@ void syslog_printheader(void)
 
         /* Read the output a line at a time - output it. */
         while(fgets(path, sizeof(path), fp) != NULL) {
-            SYSLOG_TRACE(path);
+            SYS_TRACE(path);
         }
 
         /* close */

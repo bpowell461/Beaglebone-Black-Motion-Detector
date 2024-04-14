@@ -9,16 +9,6 @@
 #ifndef OSAL_CFG_H_
 #define OSAL_CFG_H_
 
-#if defined(BEAGLEBONE)
-#define PLATFORM "beaglebone"
-#define NUM_CPU_CORES (1)
-#elif defined(RASPBERRYPI)
-#define PLATFORM "raspberrypi"
-#define NUM_CPU_CORES (4)
-#else
-#error "No platform defined!"
-#endif
-
 /* Hook your OS here */
 #include <pthread.h>
 #include <semaphore.h>

@@ -78,24 +78,30 @@
     <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemGroup>
-    <ClCompile Include="src\pthreads\src\capture.c" />
+    <ClCompile Include="src\camera\camera.c" />
+    <ClCompile Include="src\frameBuffer\framebuffer.c" />
+    <ClCompile Include="src\nvm\nvm.c" />
     <ClCompile Include="src\pthreads\src\main.c" />
     <ClCompile Include="utils\osal\osal.c" />
-    <ClCompile Include="utils\ringbuffer\ringbuffer.c" />
     <ClCompile Include="utils\syslog\syslog.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\camera\camera.h" />
+    <ClInclude Include="src\frameBuffer\framebuffer.h" />
+    <ClInclude Include="src\nvm\nvm.h" />
     <ClInclude Include="utils\osal\osal.h" />
     <ClInclude Include="utils\osal\osal_cfg.h" />
     <ClInclude Include="utils\ringbuffer\ringbuffer.h" />
     <ClInclude Include="utils\syslog\syslog.h" />
     <ClInclude Include="utils\types\types.h" />
+    <ClInclude Include="utils\types\utils.h" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\git\RTES\utils\osal;C:\git\RTES\utils\syslog;C:\git\RTES\utils\types;C:\git\RTES\utils\ringbuffer</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\git\RTES\utils\osal;C:\git\RTES\utils\syslog;C:\git\RTES\utils\types;C:\git\RTES\utils\ringbuffer;C:\git\RTES\src\camera;C:\git\RTES\src\nvm;C:\git\RTES\src\frameBuffer</AdditionalIncludeDirectories>
       <CLanguageStandard>gnu99</CLanguageStandard>
       <CppLanguageStandard>gnu++03</CppLanguageStandard>
+      <PreprocessorDefinitions>BEAGLEBONE; DEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

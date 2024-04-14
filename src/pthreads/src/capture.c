@@ -9,9 +9,6 @@
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-
-   Modified by Derek Molloy (www.derekmolloy.ie)
-   Modified to change resolution details and set paths for the Beaglebone.
  */
 
 #include <stdio.h>
@@ -24,7 +21,7 @@
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <linux/videodev2.h>
-#include <libv4l2.h>
+#include <linux/libv4l2.h>
 
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
 
@@ -74,14 +71,16 @@ int main(int argc, char** argv)
     fmt.fmt.pix.height = 1080;
     fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
     fmt.fmt.pix.field = V4L2_FIELD_INTERLACED;
+
     xioctl(fd, VIDIOC_S_FMT, &fmt);
-    if (fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_RGB24) {
+    if (fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_RGB24) 
+    {
         printf("Libv4l didn't accept RGB24 format. Can't proceed.\n");
         exit(EXIT_FAILURE);
     }
+
     if ((fmt.fmt.pix.width != 640) || (fmt.fmt.pix.height != 480))
-        printf("Warning: driver is sending image at %dx%d\n",
-            fmt.fmt.pix.width, fmt.fmt.pix.height);
+        printf("Warning: driver is sending image at %dx%d\n", fmt.fmt.pix.width, fmt.fmt.pix.height);
 
     CLEAR(req);
     req.count = 2;
@@ -90,6 +89,7 @@ int main(int argc, char** argv)
     xioctl(fd, VIDIOC_REQBUFS, &req);
 
     buffers = calloc(req.count, sizeof(*buffers));
+
     for (n_buffers = 0; n_buffers < req.count; ++n_buffers) {
         CLEAR(buf);
 
@@ -100,9 +100,7 @@ int main(int argc, char** argv)
         xioctl(fd, VIDIOC_QUERYBUF, &buf);
 
         buffers[n_buffers].length = buf.length;
-        buffers[n_buffers].start = v4l2_mmap(NULL, buf.length,
-            PROT_READ | PROT_WRITE, MAP_SHARED,
-            fd, buf.m.offset);
+        buffers[n_buffers].start = v4l2_mmap(NULL, buf.length,PROT_READ | PROT_WRITE, MAP_SHARED, fd, buf.m.offset);
 
         if (MAP_FAILED == buffers[n_buffers].start) {
             perror("mmap");
@@ -120,7 +118,8 @@ int main(int argc, char** argv)
     type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
     xioctl(fd, VIDIOC_STREAMON, &type);
-    for (i = 0; i < 20; i++) {
+    for (i = 0; i < 20; i++) 
+    {
         do {
             FD_ZERO(&fds);
             FD_SET(fd, &fds);
@@ -143,12 +142,12 @@ int main(int argc, char** argv)
 
         sprintf(out_name, "grabber%03d.ppm", i);
         fout = fopen(out_name, "w");
-        if (!fout) {
+        if (!fout) 
+        {
             perror("Cannot open image");
             exit(EXIT_FAILURE);
         }
-        fprintf(fout, "P6\n%d %d 255\n",
-            fmt.fmt.pix.width, fmt.fmt.pix.height);
+        fprintf(fout, "P6\n%d %d 255\n", fmt.fmt.pix.width, fmt.fmt.pix.height);
         fwrite(buffers[buf.index].start, buf.bytesused, 1, fout);
         fclose(fout);
 

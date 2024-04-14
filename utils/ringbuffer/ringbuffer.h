@@ -2,7 +2,7 @@
  * @file ringbuffer.h
  * @author Brad Powell
  * @date 08 April 2024
- * @brief Generic Ring Buffer macros adapted from Phillip Thrasher's C Generic Ring Buffer.
+ * @brief Statically allocated generic ring buffer macros adapted from Phillip Thrasher's C Generic Ring Buffer.
  *  https://github.com/pthrasher/c-generic-ring-buffer/tree/master
  *
  **/
@@ -21,9 +21,9 @@
 
 typedef enum
 {
-    BUFFER_EMPTY,
-    BUFFER_FULL,
-    BUFFER_NONE
+    BUFSTATE_EMPTY,
+    BUFSTATE_FULL,
+    BUFSTATE_COUNT
 }buffer_state_e;
 
 #define ringbuffer_init(BUF, TYPE, SIZE) \
