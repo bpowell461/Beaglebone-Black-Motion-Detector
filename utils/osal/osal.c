@@ -404,15 +404,18 @@ void osal_task_delay(osal_id_t id)
     osal_task_suspend(id);
 }
 
+void osal_task_delay_period(osal_id_t id, UINT32 period_ms)
+{
+    osal_task_set_period(id, period_ms);
+    osal_task_suspend(id);
+}
+
 void osal_task_set_period(osal_id_t id, UINT32 period_ms)
 {
     osal_mutex_lock(&os_sched_mutex);
-    if (TASKSTATE_UNUSED != osal_task_sequencers[id].task_state)
-    {
-        /* REQ: Period must be a multiple of timer tick and >= the timer tick resolution */
-        osal_task_sequencers[id].period_ms = period_ms;
-        osal_task_sequencers[id].period_cnts = (period_ms / TIMER_TICK_MS);
-    }
+    /* REQ: Period must be a multiple of timer tick and >= the timer tick resolution */
+    osal_task_sequencers[id].period_ms = period_ms;
+    osal_task_sequencers[id].period_cnts = (period_ms / TIMER_TICK_MS);
     osal_mutex_unlock(&os_sched_mutex);
 }
 
@@ -502,7 +505,7 @@ static void osal_task_generic_sequencer(UINT32 id)
     for (UINT32 i = 0; i < MAX_TASKS; i++)
     {
         osal_mutex_lock(&os_sched_mutex);
-        if (TASKSTATE_UNUSED != osal_task_sequencers[i].task_state)
+        if (TASKSTATE_UNUSED != osal_task_sequencers[i].task_state && osal_task_sequencers[i].period_cnts != 0)
         {
             if ((cnt % osal_task_sequencers[i].period_cnts) == 0)
                 osal_task_start((osal_id_t)i);

@@ -73,6 +73,7 @@ void camera_init(INT32 *fd)
         SYS_TRACE("WARN: driver is sending image at %dx%d\n", fmt.fmt.pix.width, fmt.fmt.pix.height);
 
     *fd = camera_fd;
+
 }
 
 void *camera_task(void *threadp)
