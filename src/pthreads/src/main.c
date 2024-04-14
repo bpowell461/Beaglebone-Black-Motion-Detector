@@ -43,6 +43,8 @@ int main(void)
         return 1;
     }
 
+    osal_task_start(bootstrap_id);
+
     osal_task_wait_id(bootstrap_id);
 
     osal_deinit();
@@ -52,13 +54,21 @@ int main(void)
 
 void* bootstrapper_task(void* threadp)
 {
+    osal_task_wait_start(bootstrap_id);
+
     osal_priority_t prio = {97, 0};
     osal_id_t camera_id;
-    osal_task_create(&camera_id, "camera", 0, prio, camera_task, NULL);
+    if (SYS_SUCCESS != osal_task_create(&camera_id, "camera", 0, prio, camera_task, NULL))
+    {
+        SYS_TRACE("ERR: CAMERA TASK CREATE");
+    }
 
     prio = (osal_priority_t){96, 0};
     osal_id_t nvm_id;
-    osal_task_create(&nvm_id, "nvm", 0, prio, nvm_task, NULL);
+    if (SYS_SUCCESS != osal_task_create(&nvm_id, "nvm", 0, prio, nvm_task, NULL))
+    {
+        SYS_TRACE("ERR: NVM TASK CREATE");
+    }
 
     osal_task_start(camera_id);
     osal_task_start(nvm_id);
