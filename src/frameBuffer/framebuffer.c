@@ -38,7 +38,7 @@ sys_result_e framebuffer_init(INT32 *fd, UINT08 bufCount)
     req.memory = V4L2_MEMORY_MMAP;
     if (SYS_FAILURE == framebuffer_ioctl(framebuffer_fd, VIDIOC_REQBUFS, &req))
     {
-        perror("Requesting Buffer");
+        SYS_TRACE("Requesting Buffer");
         exit(1);
     }
 
@@ -47,7 +47,7 @@ sys_result_e framebuffer_init(INT32 *fd, UINT08 bufCount)
     buf.index = 0;
     if (SYS_FAILURE == framebuffer_ioctl(framebuffer_fd, VIDIOC_QUERYBUF, &buf))
     {
-        perror("Could not query buffer");
+        SYS_TRACE("Could not query buffer");
         exit(1);
     }
 
@@ -80,6 +80,7 @@ sys_result_e framebuffer_getframe(INT32 fd)
     struct v4l2_buffer buf = { 0 };
     fd_set fds;
     char out_name[256];
+    INT32 ret;
 
     FD_ZERO(&fds);
     FD_SET(fd, &fds);
@@ -92,11 +93,27 @@ sys_result_e framebuffer_getframe(INT32 fd)
 
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
-    framebuffer_ioctl(fd, VIDIOC_DQBUF, &buf);
+    if (SYS_SUCCESS != framebuffer_ioctl(fd, VIDIOC_DQBUF, &buf))
+    {
+        SYS_TRACE("ERR: FRAMEBUFFER DQBUF");
+        return SYS_FAILURE;
+    }
 
     sprintf(out_name, "frame%03d.yuy", frameIdx);
-    INT32 file = open(out_name, O_WRONLY);
-    write(file, frameBuffer, frameBufferSize);
+    INT32 file = open(out_name, O_WRONLY | O_CREAT | O_TRUNC);
+    if (0 > file)
+    {
+        SYS_TRACE("ERR: FILE OPEN");
+        return SYS_FAILURE;
+    }
+
+    ret = write(file, frameBuffer, frameBufferSize);
+    if (0 > ret)
+    {
+        SYS_TRACE("ERR: WRITE");
+        return SYS_FAILURE;
+    }
+
     close(file);
     frameIdx++;
 

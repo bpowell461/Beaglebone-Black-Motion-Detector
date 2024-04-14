@@ -150,6 +150,10 @@ void syslog_trace(const char *msg, ...)
         va_list argp;
         va_start(argp, msg);
 
+#if defined(LOG_AND_PRINT)
+        printf(msg, argp);
+#endif
+
         /* For now we are appending a newline character */
         if ('\n' != msg[strlen(msg)])
         {
@@ -163,9 +167,6 @@ void syslog_trace(const char *msg, ...)
         }
         va_end(argp);
 
-#if defined(LOG_AND_PRINT)
-        printf(msg);
-#endif
     }
     
 }

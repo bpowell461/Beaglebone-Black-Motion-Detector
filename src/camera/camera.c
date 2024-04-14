@@ -30,7 +30,7 @@ typedef enum
 }camera_state_e;
 
 /** Static Variables **/
-static const UINT32 task_rate_usec = TASK_RATE_MSEC;
+static const UINT32 task_rate_msec = TASK_RATE_MSEC;
 static INT32 camera_fd;
 
 static char *dev_name = "/dev/video0";
@@ -84,7 +84,7 @@ void *camera_task(void *threadp)
 
     SYS_TRACE("Camera Task Waiting for Start...");
 
-    osal_task_set_period(id, task_rate_usec);
+    osal_task_set_period(id, task_rate_msec);
 
     osal_task_wait_start(id);
 

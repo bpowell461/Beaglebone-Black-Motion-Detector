@@ -13,7 +13,7 @@
 /** Type Definitions **/
 
 /** Static Variables **/
-static const UINT32 task_rate_usec = TASK_RATE_MSEC;
+static const UINT32 task_rate_msec = TASK_RATE_MSEC;
 static INT32 nvm_fd;
 
 /** Global Variables **/
@@ -33,14 +33,17 @@ void *nvm_task(void *threadp)
 
     SYS_TRACE("NVM Task Waiting for Start...");
 
-    osal_task_set_period(id, task_rate_usec);
+    osal_task_set_period(id, task_rate_msec);
 
     osal_task_wait_start(id);
 
     while(DEF_TRUE)
     {
         SYS_TRACE("Getting frame");
-        framebuffer_getframe(nvm_fd);
+        if (SYS_SUCCESS != framebuffer_getframe(nvm_fd))
+        {
+            SYS_TRACE("ERR: GET FRAME");
+        }
 
         if (framebuffer_getframeidx() >= SAVED_FRAMES_MAX)
         {

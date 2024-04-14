@@ -43,4 +43,6 @@ void osal_task_set_period(osal_id_t id, UINT32 period_ms);
 
 void osal_task_wait_all(void);
 
+void osal_task_wait_id(osal_id_t id);
+
 #endif // OSAL_H_

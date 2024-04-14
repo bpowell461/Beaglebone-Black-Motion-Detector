@@ -42,6 +42,8 @@ int main(void)
         SYS_TRACE("ERR: BOOTSTRAP TASK CREATE");
         return 1;
     }
+
+    osal_task_wait_id(bootstrap_id);
  
     return 0;
 }
