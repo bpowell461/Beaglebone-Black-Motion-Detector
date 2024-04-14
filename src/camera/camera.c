@@ -19,6 +19,7 @@
 
 /* TASK RATE: 1Hz */ 
 #define TASK_RATE_MSEC  (1 * MSEC_PER_SEC)
+#define MAX_WRITE_ERRORS (5u)
 
 /** Type Definitions **/
 typedef enum
@@ -31,6 +32,7 @@ typedef enum
 /** Static Variables **/
 static const UINT32 task_rate_msec = TASK_RATE_MSEC;
 static INT32 camera_fd;
+static UINT08 write_errors = 0;
 
 static char *dev_name = "/dev/video0";
 
@@ -96,9 +98,21 @@ void *camera_task(void *threadp)
         }
 
         SYS_TRACE("Writing frame");
+
         if (SYS_SUCCESS != framebuffer_writeframe(camera_fd))
         {
+            write_errors++;
             SYS_TRACE("ERR: WRITEFRAME");
+        }
+        else
+        {
+            write_errors = 0;
+        }
+
+        if (MAX_WRITE_ERRORS <= write_errors)
+        {
+            SYS_TRACE("Maximum consecutive write errors reached.\n");
+            break;
         }
 
         osal_task_delay(id);

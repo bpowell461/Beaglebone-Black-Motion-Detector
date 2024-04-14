@@ -7,7 +7,6 @@
 #include "framebuffer.h"
 
 #define NUM_THREADS 2
-#define NUM_FRAME_BUFS 5
 
 #define ASSIGNMENT 1
 #define COURSE 3
@@ -20,7 +19,7 @@ int main(void)
     syslog_printheader();
 
     camera_init(&v4l_fd);
-    framebuffer_init(&v4l_fd, NUM_FRAME_BUFS);
+    framebuffer_init(&v4l_fd);
     nvm_init(&v4l_fd);
     
     if (SYS_SUCCESS != osal_init())

@@ -14,7 +14,7 @@
 
 #if defined(DEBUG)
     #if defined(LOG_AND_PRINT)
-        #define SYS_TRACE(...) syslog_trace(__VA_ARGS__);  syslog_print(__VA_ARGS__)
+        #define SYS_TRACE(...) do { syslog_trace(__VA_ARGS__);  syslog_print(__VA_ARGS__); }while(0)
     #else
         #define SYS_TRACE(...)  syslog_trace(__VA_ARGS__)
     #endif
