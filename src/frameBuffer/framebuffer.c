@@ -15,6 +15,8 @@
 #include "osal.h"
 #include "camera_cfg.h"
 
+#define USE_ALT_FILE_SAVE
+
 static UINT08 *frameBuffer;
 static INT32 framebuffer_fd;
 static UINT32 frameBufferSize = 0;
@@ -100,10 +102,13 @@ sys_result_e framebuffer_getframe(INT32 fd)
         return SYS_FAILURE;
     }
 
-#if USE_ALT_FILE_SAVE
+#if defined(USE_ALT_FILE_SAVE)
+
     framebuffer_savealt();
 #else
+
     framebuffer_save();
+
 #endif
 
     frameIdx++;
