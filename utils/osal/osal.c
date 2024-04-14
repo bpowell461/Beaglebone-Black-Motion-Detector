@@ -458,9 +458,9 @@ sys_result_e osal_start_scheduler(void)
     osal_mutex_lock(&os_sched_mutex);
 
     itval.it_interval.tv_sec = 0;
-    itval.it_interval.tv_nsec = (TIMER_TICK_MS * USEC_PER_MSEC * NSEC_PER_SEC);
+    itval.it_interval.tv_nsec = (TIMER_TICK_MS * USEC_PER_MSEC * NSEC_PER_USEC);
     itval.it_value.tv_sec = 0;
-    itval.it_value.tv_nsec = (TIMER_TICK_MS * USEC_PER_MSEC * NSEC_PER_SEC);
+    itval.it_value.tv_nsec = (TIMER_TICK_MS * USEC_PER_MSEC * NSEC_PER_USEC);
 
     signal(SIGALRM, (void(*)()) osal_task_generic_sequencer);
 
@@ -505,7 +505,7 @@ static void osal_task_generic_sequencer(UINT32 id)
         if (TASKSTATE_UNUSED != osal_task_sequencers[i].task_state)
         {
             if ((cnt % osal_task_sequencers[i].period_cnts) == 0)
-                osal_sem_signal(&osal_task_sequencers[i].signal_sem);
+                osal_task_start((osal_id_t)i);
         }
         osal_mutex_unlock(&os_sched_mutex);
     }
