@@ -249,6 +249,7 @@ sys_result_e osal_task_delete(osal_id_t id, BOOL_T force)
 
     /* CRITICAL SECTION */
     osal_mutex_lock(&os_tcb_mutex);
+    osal_mutex_lock(&os_sched_mutex);
 
     if (force)
         pthread_cancel(osal_task_tcb[id].task_handle);
@@ -262,6 +263,7 @@ sys_result_e osal_task_delete(osal_id_t id, BOOL_T force)
     osal_task_tcb[id].task_args = (osal_task_start_args_t){ 0, 0 };
     osal_task_sequencers[id].task_state = TASKSTATE_UNUSED;
 
+    osal_mutex_lock(&os_sched_mutex);
     osal_mutex_unlock(&os_tcb_mutex);
     /* END CRITICAL SECTION */
     
