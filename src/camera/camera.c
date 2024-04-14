@@ -33,8 +33,6 @@ static const UINT32 task_rate_msec = TASK_RATE_MSEC;
 static INT32 camera_fd;
 
 static char *dev_name = "/dev/video0";
-static UINT32 width = PIXEL_WIDTH;
-static UINT32 height = PIXEL_HEIGHT;
 
 /** Global Variables **/
 
@@ -57,10 +55,10 @@ void camera_init(INT32 *fd)
     /* Setting camera format  */
     CLEAR(fmt);
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    fmt.fmt.pix.width = width;
-    fmt.fmt.pix.height = height;
+    fmt.fmt.pix.width = PIXEL_WIDTH;
+    fmt.fmt.pix.height = PIXEL_HEIGHT;
     fmt.fmt.pix.pixelformat = PIXEL_FORMAT_CAMERA;
-    fmt.fmt.pix.field = V4L2_FIELD_INTERLACED;
+    fmt.fmt.pix.field = PIXEL_FORMAT_FIELD;
 
     camera_ioctl(camera_fd, VIDIOC_S_FMT, &fmt);
     if (fmt.fmt.pix.pixelformat != PIXEL_FORMAT_CAMERA)
@@ -69,7 +67,7 @@ void camera_init(INT32 *fd)
         exit(EXIT_FAILURE);
     }
 
-    if ((fmt.fmt.pix.width != 640) || (fmt.fmt.pix.height != 480))
+    if ((fmt.fmt.pix.width != PIXEL_WIDTH) || (fmt.fmt.pix.height != PIXEL_HEIGHT))
         SYS_TRACE("WARN: driver is sending image at %dx%d\n", fmt.fmt.pix.width, fmt.fmt.pix.height);
 
     *fd = camera_fd;
