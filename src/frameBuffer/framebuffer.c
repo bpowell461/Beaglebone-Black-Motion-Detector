@@ -99,7 +99,7 @@ sys_result_e framebuffer_getframe(INT32 fd)
         return SYS_FAILURE;
     }
 
-    sprintf(out_name, "frame%03d.yuy", frameIdx);
+    sprintf(out_name, "frame%03d.ppm", frameIdx);
     INT32 file = open(out_name, O_WRONLY | O_CREAT | O_TRUNC);
     if (0 > file)
     {
