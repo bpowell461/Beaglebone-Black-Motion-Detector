@@ -87,6 +87,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\camera\camera.h" />
+    <ClInclude Include="src\camera\camera_cfg.h" />
     <ClInclude Include="src\frameBuffer\framebuffer.h" />
     <ClInclude Include="src\nvm\nvm.h" />
     <ClInclude Include="utils\osal\osal.h" />
