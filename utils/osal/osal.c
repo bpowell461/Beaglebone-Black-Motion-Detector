@@ -18,7 +18,7 @@
 
 #define MAX_TASKS 128
 
-#define TIMER_TICK_MS (10U)
+#define TIMER_TICK_MS (100U)
 
 typedef struct
 {
