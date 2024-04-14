@@ -13,13 +13,12 @@
 #include "utils.h"
 #include "syslog.h"
 #include "framebuffer.h"
+#include "camera_cfg.h"
 
 /** Macros **/
 
 /* TASK RATE: 1Hz */ 
 #define TASK_RATE_MSEC  (1 * MSEC_PER_SEC)
-
-#define PIXEL_FORMAT_CAMERA (V4L2_PIX_FMT_YUYV)
 
 /** Type Definitions **/
 typedef enum
@@ -34,8 +33,8 @@ static const UINT32 task_rate_msec = TASK_RATE_MSEC;
 static INT32 camera_fd;
 
 static char *dev_name = "/dev/video0";
-static UINT32 width = 640;
-static UINT32 height = 480;
+static UINT32 width = PIXEL_WIDTH;
+static UINT32 height = PIXEL_HEIGHT;
 
 /** Global Variables **/
 
@@ -60,7 +59,7 @@ void camera_init(INT32 *fd)
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     fmt.fmt.pix.width = width;
     fmt.fmt.pix.height = height;
-    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+    fmt.fmt.pix.pixelformat = PIXEL_FORMAT_CAMERA;
     fmt.fmt.pix.field = V4L2_FIELD_INTERLACED;
 
     camera_ioctl(camera_fd, VIDIOC_S_FMT, &fmt);

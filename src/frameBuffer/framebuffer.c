@@ -13,6 +13,7 @@
 #include "utils.h"
 #include "syslog.h"
 #include "osal.h"
+#include "camera_cfg.h"
 
 static UINT08 *frameBuffer;
 static INT32 framebuffer_fd;
@@ -21,6 +22,8 @@ static UINT16 frameIdx = 0;
 static osal_mutex_t mtx;
 
 static sys_result_e framebuffer_ioctl(INT32 fd, INT32 request, void *arg);
+static sys_result_e framebuffer_saveppm(void);
+static sys_result_e framebuffer_saveyuv(void);
 
 sys_result_e framebuffer_init(INT32 *fd, UINT08 bufCount)
 {
@@ -99,7 +102,7 @@ sys_result_e framebuffer_getframe(INT32 fd)
         return SYS_FAILURE;
     }
 
-    sprintf(out_name, "frame%03d.ppm", frameIdx);
+    sprintf(out_name, "frame%03d.yuv", frameIdx);
     INT32 file = open(out_name, O_WRONLY | O_CREAT | O_TRUNC);
     if (0 > file)
     {
@@ -142,4 +145,30 @@ static sys_result_e framebuffer_ioctl(INT32 fd, INT32 request, void *arg)
     }
 
     return SYS_SUCCESS;
+}
+
+static sys_result_e framebuffer_saveppm(void)
+{
+    FILE *fout;
+    char out_name[256];
+    sprintf(out_name, "frame%03d.ppm", frameIdx);
+    fout = fopen(out_name, "w");
+    if (!fout)
+    {
+        SYS_TRACE("Cannot open image");
+        return (SYS_FAILURE);
+    }
+    fprintf(fout, "P6\n%d %d 255\n", PIXEL_WIDTH, PIXEL_HEIGHT);
+    if (0 > fwrite(frameBuffer, frameBufferSize, 1, fout))
+    {
+        SYS_TRACE("Failed to write to file!");
+    }
+    fclose(fout);
+
+    return SYS_SUCCESS;
+}
+
+static sys_result_e framebuffer_saveyuv(void)
+{
+
 }
