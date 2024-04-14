@@ -55,7 +55,7 @@ void *nvm_task(void *threadp)
     SYS_TRACE("NVM Task Exiting...");
     framebuffer_deinit();
 
-    osal_task_delete(id);
+    osal_task_delete(id, DEF_FALSE);
 
     return NULL;
 } 

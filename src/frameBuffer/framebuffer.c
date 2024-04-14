@@ -22,8 +22,8 @@ static UINT16 frameIdx = 0;
 static osal_mutex_t mtx;
 
 static sys_result_e framebuffer_ioctl(INT32 fd, INT32 request, void *arg);
-static sys_result_e framebuffer_saveppm(void);
-static sys_result_e framebuffer_saveyuv(void);
+static sys_result_e framebuffer_save(void);
+static sys_result_e framebuffer_savealt(void);
 
 sys_result_e framebuffer_init(INT32 *fd, UINT08 bufCount)
 {
@@ -102,22 +102,12 @@ sys_result_e framebuffer_getframe(INT32 fd)
         return SYS_FAILURE;
     }
 
-    sprintf(out_name, "frame%03d.yuv", frameIdx);
-    INT32 file = open(out_name, O_WRONLY | O_CREAT | O_TRUNC);
-    if (0 > file)
-    {
-        SYS_TRACE("ERR: FILE OPEN");
-        return SYS_FAILURE;
-    }
+#if USE_ALT_FILE_SAVE
+    framebuffer_savealt();
+#else
+    framebuffer_save();
+#endif
 
-    ret = write(file, frameBuffer, frameBufferSize);
-    if (0 > ret)
-    {
-        SYS_TRACE("ERR: WRITE");
-        return SYS_FAILURE;
-    }
-
-    close(file);
     frameIdx++;
 
     osal_mutex_unlock(&mtx);
@@ -147,7 +137,7 @@ static sys_result_e framebuffer_ioctl(INT32 fd, INT32 request, void *arg)
     return SYS_SUCCESS;
 }
 
-static sys_result_e framebuffer_saveppm(void)
+static sys_result_e framebuffer_savealt(void)
 {
     FILE *fout;
     char out_name[256];
@@ -168,7 +158,26 @@ static sys_result_e framebuffer_saveppm(void)
     return SYS_SUCCESS;
 }
 
-static sys_result_e framebuffer_saveyuv(void)
+static sys_result_e framebuffer_save(void)
 {
+    char out_name[256];
+    INT32 ret;
+    sprintf(out_name, IMAGE_FILE("frame%03d"), frameIdx);
+    INT32 file = open(out_name, O_WRONLY | O_CREAT | O_TRUNC);
+    if (0 > file)
+    {
+        SYS_TRACE("ERR: FILE OPEN");
+        return SYS_FAILURE;
+    }
 
+    ret = write(file, frameBuffer, frameBufferSize);
+    if (0 > ret)
+    {
+        SYS_TRACE("ERR: WRITE");
+        return SYS_FAILURE;
+    }
+
+    close(file);
+
+    return SYS_SUCCESS;
 }

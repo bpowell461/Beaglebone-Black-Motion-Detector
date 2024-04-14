@@ -21,4 +21,6 @@
 
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
 
+#define IS_ERROR(x)     ((x) < 0 ? SYS_FAILURE : SYS_SUCCESS)
+
 #endif
