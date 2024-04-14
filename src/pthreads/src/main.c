@@ -7,6 +7,7 @@
 #include "framebuffer.h"
 
 #define NUM_THREADS 2
+#define NUM_FRAME_BUFS 5
 
 #define ASSIGNMENT 1
 #define COURSE 3
@@ -23,14 +24,24 @@ int main(void)
     syslog_printheader();
 
     camera_init(&v4l_fd);
-    framebuffer_init(&v4l_fd, 2);
+    framebuffer_init(&v4l_fd, NUM_FRAME_BUFS);
     nvm_init(&v4l_fd);
     
-    osal_init();
+    if (SYS_SUCCESS != osal_init())
+    {
+        SYS_TRACE("ERR: OS_INITIALIZE");
+        return 1;
+    }
+
+    SYS_TRACE("OS INITIALIZED");
 
     osal_priority_t prio = { 98, 0 };
 
-    osal_task_create(&bootstrap_id, "bootstrap", 0, prio, bootstrapper_task, NULL);
+    if (SYS_SUCCESS != osal_task_create(&bootstrap_id, "bootstrap", 0, prio, bootstrapper_task, NULL))
+    {
+        SYS_TRACE("ERR: BOOTSTRAP TASK CREATE");
+        return 1;
+    }
  
     return 0;
 }
@@ -40,12 +51,15 @@ void* bootstrapper_task(void* threadp)
     osal_priority_t prio = {97, 0};
     osal_id_t camera_id;
     osal_task_create(&camera_id, "camera", 0, prio, camera_task, NULL);
-    osal_task_start(camera_id);
 
     prio = (osal_priority_t){96, 0};
     osal_id_t nvm_id;
     osal_task_create(&nvm_id, "nvm", 0, prio, nvm_task, NULL);
+
+    osal_task_start(camera_id);
     osal_task_start(nvm_id);
+
+    osal_task_wait_all();
 
     osal_task_delete(bootstrap_id);
 

@@ -103,6 +103,9 @@
       <CppLanguageStandard>gnu++03</CppLanguageStandard>
       <PreprocessorDefinitions>BEAGLEBONE; DEBUG</PreprocessorDefinitions>
     </ClCompile>
+    <Link>
+      <AdditionalDependencies>-pthread;-lrt;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

@@ -18,6 +18,7 @@
 
 /* Macros Defines */
 #define USE_TRACE 1
+#define LOG_AND_PRINT
 
 #define NULL_TERM_SIZE          (1u)
 #define MONTH_SIZE              (3u)
@@ -161,6 +162,10 @@ void syslog_trace(const char *msg, ...)
             _vprintFunc(msg, argp);
         }
         va_end(argp);
+
+#if defined(LOG_AND_PRINT)
+        printf(msg);
+#endif
     }
     
 }

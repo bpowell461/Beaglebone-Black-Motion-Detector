@@ -15,8 +15,11 @@
 #include "framebuffer.h"
 
 /** Macros **/
-#define TASK_RATE_HZ    (1U)
-#define TASK_RATE_USEC  ((1/TASK_RATE_HZ) * USEC_PER_MSEC * MSEC_PER_SEC)
+
+/* TASK RATE: 1Hz */ 
+#define TASK_RATE_MSEC  (1 * MSEC_PER_SEC)
+
+#define PIXEL_FORMAT_CAMERA (V4L2_PIX_FMT_YUYV)
 
 /** Type Definitions **/
 typedef enum
@@ -27,7 +30,7 @@ typedef enum
 }camera_state_e;
 
 /** Static Variables **/
-static const UINT32 task_rate_usec = TASK_RATE_USEC;
+static const UINT32 task_rate_usec = TASK_RATE_MSEC;
 static INT32 camera_fd;
 
 static char *dev_name = "/dev/video0";
@@ -57,13 +60,13 @@ void camera_init(INT32 *fd)
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     fmt.fmt.pix.width = width;
     fmt.fmt.pix.height = height;
-    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
+    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
     fmt.fmt.pix.field = V4L2_FIELD_INTERLACED;
 
     camera_ioctl(camera_fd, VIDIOC_S_FMT, &fmt);
-    if (fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_RGB24)
+    if (fmt.fmt.pix.pixelformat != PIXEL_FORMAT_CAMERA)
     {
-        SYS_TRACE("ERR: Libv4l didn't accept RGB24 format. Can't proceed.\n");
+        SYS_TRACE("ERR: Libv4l didn't accept format. Can't proceed.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -79,6 +82,10 @@ void *camera_task(void *threadp)
 
     osal_id_t id = args.task_id;
 
+    SYS_TRACE("Camera Task Waiting for Start...");
+
+    osal_task_set_period(id, task_rate_usec);
+
     osal_task_wait_start(id);
 
     camera_capturestate(eCAMERA_ON);
@@ -89,14 +96,17 @@ void *camera_task(void *threadp)
         {
             break;
         }
-        else
+
+        SYS_TRACE("Writing frame");
+        if (SYS_SUCCESS != framebuffer_writeframe(camera_fd))
         {
-            framebuffer_writeframe(camera_fd);
+            SYS_TRACE("ERR: WRITEFRAME");
         }
 
-        osal_task_delay(task_rate_usec);
+        osal_task_delay(id);
     }
 
+    SYS_TRACE("Camera Task Exiting...");
     camera_capturestate(eCAMERA_OFF);
     osal_task_delete(id);
 
@@ -110,10 +120,12 @@ static sys_result_e camera_capturestate(camera_state_e state)
 
     if (eCAMERA_ON == state)
     {
+        SYS_TRACE("CAMERA STATE: ON");
         res = camera_ioctl(camera_fd, VIDIOC_STREAMON, &type);
     }
     else if (eCAMERA_OFF == state)
     {
+        SYS_TRACE("CAMERA STATE: OFF");
         res = camera_ioctl(camera_fd, VIDIOC_STREAMOFF, &type);
     }
     else

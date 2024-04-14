@@ -3,15 +3,17 @@
 #include "osal.h"
 #include "framebuffer.h"
 #include "utils.h"
+#include "syslog.h"
 
 /** Macros **/
-#define TASK_RATE_HZ        (1U)
-#define TASK_RATE_USEC      ((1/TASK_RATE_HZ) * USEC_PER_MSEC * MSEC_PER_SEC)
+
+/* TASK RATE: 0.33Hz  */
+#define TASK_RATE_MSEC      (3 * MSEC_PER_SEC)
 
 /** Type Definitions **/
 
 /** Static Variables **/
-static const UINT32 task_rate_usec = TASK_RATE_USEC * 3;
+static const UINT32 task_rate_usec = TASK_RATE_MSEC;
 static INT32 nvm_fd;
 
 /** Global Variables **/
@@ -29,19 +31,25 @@ void *nvm_task(void *threadp)
 
     osal_id_t id = args.task_id;
 
+    SYS_TRACE("NVM Task Waiting for Start...");
+
+    osal_task_set_period(id, task_rate_usec);
+
     osal_task_wait_start(id);
 
     while(DEF_TRUE)
     {
+        SYS_TRACE("Getting frame");
         framebuffer_getframe(nvm_fd);
 
         if (framebuffer_getframeidx() >= SAVED_FRAMES_MAX)
         {
             break;
         }
-        osal_task_delay(task_rate_usec);
+        osal_task_delay(id);
     }
 
+    SYS_TRACE("NVM Task Exiting...");
     framebuffer_deinit();
 
     osal_task_delete(id);

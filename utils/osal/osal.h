@@ -37,9 +37,10 @@ sys_result_e osal_sem_wait(osal_sem_t *sem);
 
 void osal_task_wait_start(osal_id_t id);
 
-static inline void osal_task_delay(UINT32 delay)
-{
-    usleep(delay);
-}
+void osal_task_delay(osal_id_t id);
+
+void osal_task_set_period(osal_id_t id, UINT32 period_ms);
+
+void osal_task_wait_all(void);
 
 #endif // OSAL_H_
