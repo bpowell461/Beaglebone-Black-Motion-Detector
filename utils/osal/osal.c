@@ -55,6 +55,7 @@ static osal_mutex_t os_timer_mutex;
 
 static int rt_max_prio;
 static int rt_min_prio;
+static pid_t mainpid;
 
 static void osal_task_generic_sequencer(INT32 id);
 
@@ -64,7 +65,6 @@ sys_result_e osal_init(void)
         return SYS_SUCCESS;
 
     struct sched_param main_param;
-    pid_t mainpid;
     int rc;
 
     mainpid = getpid();
@@ -115,6 +115,43 @@ sys_result_e osal_init(void)
     {
         return SYS_FAILURE;
     }
+
+    return SYS_SUCCESS;
+}
+
+sys_result_e osal_deinit(void)
+{
+    if (!os_initialized)
+        return SYS_SUCCESS;
+
+    int rc;
+
+    if (CHECK_ERROR(rc))
+    {
+        return SYS_FAILURE;
+    }
+
+    for (UINT32 i = 0; i < MAX_TASKS; i++)
+    {
+        osal_task_delete(i);
+    }
+
+    itval.it_interval.tv_sec = 0;
+    itval.it_interval.tv_nsec = 0;
+    itval.it_value.tv_sec = 0;
+    itval.it_value.tv_nsec = 0;
+
+    signal(SIGALRM, SIG_DFL);
+
+    timer_settime(osal_task_timer, 0, &itval, &oitval);
+
+    timer_delete(osal_task_timer);
+
+    rc = osal_mutex_delete(&os_task_mutex);
+
+    rc = osal_mutex_delete(&os_timer_mutex);
+
+    os_initialized = DEF_FALSE;
 
     return SYS_SUCCESS;
 }
@@ -203,7 +240,7 @@ sys_result_e osal_task_delete(osal_id_t id)
     osal_task_tcb[id].task_args = (osal_task_start_args_t){0, 0};
     osal_task_sequencers[task_idx].isTaskRunning = DEF_FALSE;
 
-    pthread_exit(NULL);
+    pthread_cancel(osal_task_tcb[id].task_handle);
 
     osal_mutex_unlock(&os_task_mutex);
     /* END CRITICAL SECTION */
@@ -270,6 +307,11 @@ sys_result_e osal_mutex_init(osal_mutex_t *mutex, osal_mutex_attr_e attr)
     return SYS_SUCCESS;
 }
 
+sys_result_e osal_mutex_delete(osal_mutex_t *mutex)
+{
+    return CHECK_ERROR(pthread_mutex_destroy(mutex));
+}
+
 sys_result_e osal_mutex_lock(osal_mutex_t *mutex)
 {
     if (!os_initialized)
@@ -295,6 +337,11 @@ sys_result_e osal_sem_init(osal_sem_t *sem)
     ret = sem_init(sem, 0, 0);
 
     return CHECK_ERROR(ret);
+}
+
+sys_result_e osal_sem_delete(osal_sem_t *sem)
+{
+    return CHECK_ERROR(sem_destroy(sem));
 }
 
 sys_result_e osal_sem_signal(osal_sem_t *sem)
@@ -352,7 +399,7 @@ void osal_task_wait_all(void)
         /* We make the assumption that the 0th index is the bootstrap thread which we won't wait on */
         for (UINT32 i = 1; i < MAX_TASKS; i++)
         {
-            if (osal_task_tcb[i].task_func != DEF_NULL_PTR)
+            if (osal_task_sequencers[i].isTaskRunning)
                 pthread_join(osal_task_tcb[i].task_handle, NULL);
         } 
     }
@@ -362,7 +409,7 @@ void osal_task_wait_id(osal_id_t id)
 {
     if (os_initialized)
     {
-        if (osal_task_tcb[id].task_func != DEF_NULL_PTR)
+        if (osal_task_sequencers[id].isTaskRunning)
             pthread_join(osal_task_tcb[id].task_handle, NULL);
     }
 }
@@ -376,7 +423,7 @@ static void osal_task_generic_sequencer(INT32 id)
         if (osal_task_sequencers[i].isTaskRunning)
         {
             if ((cnt % osal_task_sequencers[i].period_ms) == 0)
-                osal_sem_signal(&osal_task_sequencers[i].period_ms);
+                osal_sem_signal(&osal_task_sequencers[i].signal_sem);
         }
     }
 }

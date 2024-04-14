@@ -44,6 +44,8 @@ int main(void)
     }
 
     osal_task_wait_id(bootstrap_id);
+
+    osal_deinit();
  
     return 0;
 }
