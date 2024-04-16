@@ -212,7 +212,7 @@ static sys_result_e framebuffer_save(UINT32 index)
         return (SYS_FAILURE);
     }
     fprintf(fout, "P6\n%d %d 255\n", PIXEL_WIDTH, PIXEL_HEIGHT);
-    if (0 > fwrite(buffers[buf.index].start, buf.bytesused, 1, fout))
+    if (0 > fwrite(buffers[index].start, buffers[index].size, 1, fout))
     {
         SYS_TRACE("Failed to write to file!");
     }
