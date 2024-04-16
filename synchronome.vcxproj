@@ -81,7 +81,7 @@
     <ClCompile Include="src\camera\camera.c" />
     <ClCompile Include="src\frameBuffer\framebuffer.c" />
     <ClCompile Include="src\nvm\nvm.c" />
-    <ClCompile Include="src\pthreads\src\main.c" />
+    <ClCompile Include="src\main.c" />
     <ClCompile Include="utils\osal\osal.c" />
     <ClCompile Include="utils\syslog\syslog.c" />
   </ItemGroup>
