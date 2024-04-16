@@ -6,7 +6,6 @@
  *
  */
 
-#include "syslog.h"
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
@@ -14,6 +13,8 @@
 #include <stdarg.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include "syslog.h"
+#include "utils.h"
 
 /* Macros Defines */
 #define USE_TRACE 1
@@ -109,7 +110,7 @@ void syslog_printheader(void)
 
         /* Read the output a line at a time - output it. */
         while(fgets(path, sizeof(path), fp) != NULL) {
-            SYSLOG_TRACE(path);
+            SYS_TRACE(path);
         }
 
         /* close */
@@ -160,8 +161,28 @@ void syslog_trace(const char *msg, ...)
             _vprintFunc(msg, argp);
         }
         va_end(argp);
+
     }
     
+}
+
+void syslog_print(const char *msg, ...)
+{
+    va_list argp;
+    va_start(argp, msg);
+
+    /* For now we are appending a newline character */
+    if ('\n' != msg[strlen(msg)])
+    {
+        char formatted_msg[256];
+        snprintf(formatted_msg, sizeof(formatted_msg), "%s\n", msg);
+        vprintf(formatted_msg, argp);
+    }
+    else
+    {
+        vprintf(msg, argp);
+    }
+    va_end(argp);
 }
 
 static int trace_write(const char *msg , ...)
