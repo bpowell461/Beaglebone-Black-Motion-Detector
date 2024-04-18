@@ -36,7 +36,7 @@ static char *dev_name = "/dev/video0";
 
 /** Internal Function Prototypes **/
 static sys_result_e camera_capturestate(camera_state_e state);
-static sys_result_e camera_ioctl(int fh, int request, void *arg);
+static sys_result_e camera_ioctl(INT32 fh, UINT32 request, void *arg);
 
 
 void camera_init(INT32 *fd)
@@ -142,7 +142,7 @@ static sys_result_e camera_capturestate(camera_state_e state)
     return res;
 }
 
-static sys_result_e camera_ioctl(int fh, int request, void *arg)
+static sys_result_e camera_ioctl(INT32 fh, UINT32 request, void *arg)
 {
     if (-1 == ioctl(fh, request, arg))
     {

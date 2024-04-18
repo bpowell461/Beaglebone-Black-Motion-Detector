@@ -36,7 +36,7 @@ static struct timeval select_timeout;
 
 static osal_mutex_t mtx;
 
-static sys_result_e framebuffer_ioctl(INT32 fd, INT32 request, void *arg);
+static sys_result_e framebuffer_ioctl(INT32 fd, UINT32 request, void *arg);
 static UINT32       framebuffer_requestbuffers(UINT08 count);
 static UINT32       framebuffer_mapbuffers(UINT08 idx, UINT08 **bufferPtr);
 static UINT32       framebuffer_queueframe(UINT08 idx);
@@ -71,7 +71,7 @@ sys_result_e framebuffer_writeframe(INT32 fd)
     bytes = framebuffer_queueframe(writePtr);
 
     if(bytes)
-        writePtr = (writePtr + 1) % NUM_FRAME_BUFS;
+        writePtr = (writePtr + 1U) % NUM_FRAME_BUFS;
 
     osal_mutex_unlock(&mtx);
 
@@ -116,7 +116,7 @@ sys_result_e framebuffer_deinit(void)
     return SYS_SUCCESS;
 }
 
-static sys_result_e framebuffer_ioctl(INT32 fd, INT32 request, void *arg)
+static sys_result_e framebuffer_ioctl(INT32 fd, UINT32 request, void *arg)
 {
     if (-1 == ioctl(fd, request, arg))
     {
@@ -163,7 +163,7 @@ static UINT32 framebuffer_mapbuffers(UINT08 idx, UINT08 **bufferPtr)
         exit(1);
     }
 
-    *bufferPtr = (UINT08 *)mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, framebuffer_fd, buf.m.offset);
+    *bufferPtr = (UINT08 *)mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, framebuffer_fd, (off_t)buf.m.offset);
 
     return buf.length;
 }
