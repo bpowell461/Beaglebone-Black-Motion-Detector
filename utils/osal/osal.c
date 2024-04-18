@@ -16,7 +16,7 @@
 #include "utils.h"
 #include "syslog.h"
 
-#define MAX_TASKS 128
+#define MAX_TASKS 4
 
 #define TIMER_TICK_MS (100U)
 
@@ -52,6 +52,7 @@ static BOOL_T scheduler_started = DEF_FALSE;
 
 static osal_task_tcb_t osal_task_tcb[MAX_TASKS];
 static osal_sequencer_t osal_task_sequencers[MAX_TASKS];
+static osal_task_tcb_t osal_scheduler_tcb;
 
 static timer_t osal_task_timer;
 static struct itimerspec itval;
@@ -61,12 +62,16 @@ static UINT08 task_idx = 0;
 
 static osal_mutex_t os_tcb_mutex;
 static osal_mutex_t os_sched_mutex;
+static osal_sem_t   os_sched_sem;
 
 static int rt_max_prio;
 static int rt_min_prio;
 static pid_t mainpid;
 
-static void osal_task_generic_sequencer(const INT32 signal);
+static void osal_signal_handler_dispatcher(const INT32 signal);
+static void *osal_signal_handler_task(void *threadp);
+static void osal_task_generic_sequencer(void);
+static sys_result_e osal_create_scheduler(void);
 
 sys_result_e osal_init(void)
 {
@@ -78,11 +83,11 @@ sys_result_e osal_init(void)
 
     mainpid = getpid();
 
-    rt_max_prio = sched_get_priority_max(SCHED_FIFO) - 1;
+    rt_max_prio = sched_get_priority_max(SCHED_FIFO) - 2;
     rt_min_prio = sched_get_priority_min(SCHED_FIFO);
 
     rc = sched_getparam(mainpid, &main_param);
-    main_param.sched_priority = rt_max_prio + 1;
+    main_param.sched_priority = rt_max_prio + 2;
     rc = sched_setscheduler(getpid(), SCHED_FIFO, &main_param);
 
     if (IS_ERROR(rc))
@@ -112,6 +117,13 @@ sys_result_e osal_init(void)
     {
         return SYS_FAILURE;
     }
+
+    if (SYS_SUCCESS != osal_sem_init(&os_sched_sem))
+    {
+        return SYS_FAILURE;
+    }
+
+    osal_create_scheduler();
 
     return SYS_SUCCESS;
 }
@@ -155,6 +167,12 @@ sys_result_e osal_task_create(osal_id_t *id, char* name, osal_stack_t stack, osa
     pthread_attr_t attr;
     cpu_set_t threadcpu;
 
+    if (priority > rt_max_prio || priority < rt_min_prio)
+    {
+        SYS_TRACE("ERR: TASK PRIORITIES");
+        return SYS_FAILURE;
+    }
+
     res = pthread_attr_init(&attr);
     if (IS_ERROR(res))
     {
@@ -172,7 +190,7 @@ sys_result_e osal_task_create(osal_id_t *id, char* name, osal_stack_t stack, osa
     res = pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
     res = pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &threadcpu);
 
-    sp.sched_priority = priority.priority;
+    sp.sched_priority = priority;
     pthread_attr_setschedparam(&attr, &sp);
 
     /* CRITICAL SECTION */
@@ -227,14 +245,16 @@ sys_result_e osal_task_start(osal_id_t id)
     if (!os_initialized)
         return SYS_FAILURE;
 
+    osal_mutex_lock(&os_sched_mutex);
     if (SYS_SUCCESS != osal_sem_signal(&osal_task_sequencers[id].signal_sem))
     {
+        osal_mutex_unlock(&os_sched_mutex);
         SYS_TRACE("ERR: TASK START (%s)", osal_task_tcb[id].task_name);
         return SYS_FAILURE;
     }
 
     osal_task_sequencers[task_idx].task_state = TASKSTATE_RUNNING;
-
+    osal_mutex_unlock(&os_sched_mutex);
     return SYS_SUCCESS;
 }
 
@@ -243,20 +263,18 @@ sys_result_e osal_task_delete(osal_id_t id, BOOL_T force)
     if (!os_initialized)
         return SYS_FAILURE;
 
-    osal_stop_scheduler();
-
+    osal_mutex_lock(&os_sched_mutex);
     /* CRITICAL SECTION */
    osal_task_tcb[id].task_name = "";
    osal_task_tcb[id].task_stack = 0;
-   osal_task_tcb[id].task_priority = (osal_priority_t){ 0, 0 };
+   osal_task_tcb[id].task_priority = 0;
    osal_task_tcb[id].task_func = DEF_NULL_PTR;
    osal_task_tcb[id].task_args = (osal_task_start_args_t){ 0, 0 };
 
     osal_sem_delete(&osal_task_sequencers[id].signal_sem);
     osal_task_sequencers[id].task_state = TASKSTATE_UNUSED;
     /* END CRITICAL SECTION */
-
-    osal_start_scheduler();
+    osal_mutex_unlock(&os_sched_mutex);
 
     if (force)
         pthread_cancel(osal_task_tcb[id].task_handle);
@@ -271,7 +289,9 @@ sys_result_e osal_task_suspend(osal_id_t id)
     if (!os_initialized)
         return SYS_FAILURE;
 
+    osal_mutex_lock(&os_sched_mutex);
     osal_task_sequencers[id].task_state = TASKSTATE_SUSPENDED;
+    osal_mutex_unlock(&os_sched_mutex);
 
     return osal_sem_wait(&osal_task_sequencers[id].signal_sem);
 }
@@ -462,7 +482,7 @@ sys_result_e osal_start_scheduler(void)
     itval.it_value.tv_sec = 0;
     itval.it_value.tv_nsec = (TIMER_TICK_MS * USEC_PER_MSEC * NSEC_PER_USEC);
 
-    action.sa_handler = osal_task_generic_sequencer;
+    action.sa_handler = osal_signal_handler_dispatcher;
 
     sigemptyset(&action.sa_mask);
     action.sa_flags = 0;
@@ -506,13 +526,84 @@ sys_result_e osal_stop_scheduler(void)
     return IS_ERROR(ret);
 }
 
-static void osal_task_generic_sequencer(const INT32 signal)
+static sys_result_e osal_create_scheduler(void)
+{
+    if (!os_initialized)
+        return SYS_FAILURE;
+
+    int res;
+    pthread_attr_t attr;
+    cpu_set_t threadcpu;
+
+    res = pthread_attr_init(&attr);
+    if (IS_ERROR(res))
+    {
+        SYS_TRACE("ERR: CREATE TASK ATTR");
+        return SYS_FAILURE;
+    }
+
+    struct sched_param sp;
+    res = pthread_attr_getschedparam(&attr, &sp);
+
+    CPU_ZERO(&threadcpu);
+    CPU_SET(0, &threadcpu);
+
+    res = pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+    res = pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+    res = pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &threadcpu);
+
+    sp.sched_priority = rt_max_prio + 1;
+    pthread_attr_setschedparam(&attr, &sp);
+
+    /* CRITICAL SECTION */
+    osal_mutex_lock(&os_tcb_mutex);
+
+    osal_scheduler_tcb.task_id = MAX_TASKS;
+    osal_scheduler_tcb.task_name = "Scheduler";
+    osal_scheduler_tcb.task_stack = 0;
+    osal_scheduler_tcb.task_priority = (osal_priority_t)(rt_max_prio + 1);
+    osal_scheduler_tcb.task_func = osal_signal_handler_task;
+    osal_scheduler_tcb.task_args = (osal_task_start_args_t){ MAX_TASKS, NULL };
+
+    res = pthread_create(&osal_scheduler_tcb.task_handle, &attr, osal_signal_handler_task, (void *)&osal_scheduler_tcb.task_args);
+    if (IS_ERROR(res))
+    {
+        SYS_TRACE("ERR: CREATE TASK");
+        goto cleanup;
+    }
+
+cleanup:
+    osal_mutex_unlock(&os_tcb_mutex);
+    /* END CRITICAL SECTION */
+
+    pthread_attr_destroy(&attr);
+
+    return SYS_SUCCESS;
+}
+
+static void osal_signal_handler_dispatcher(const INT32 signal)
+{
+    osal_sem_signal(&os_sched_sem);
+}
+
+static void* osal_signal_handler_task(void* threadp)
+{
+    while (DEF_TRUE)
+    {
+        osal_sem_wait(&os_sched_sem);
+        osal_task_generic_sequencer();
+    }
+
+    pthread_exit(NULL);
+}
+
+static inline void osal_task_generic_sequencer(void)
 {
     static unsigned long long cnt = 0;
-
+    osal_mutex_lock(&os_sched_mutex);
     for (UINT32 i = 0; i < MAX_TASKS; i++)
     {
-        if (osal_task_sequencers[i].period_cnts != 0)
+        if (osal_task_sequencers[i].task_state != TASKSTATE_UNUSED && osal_task_sequencers[i].period_cnts != 0)
         {
             if ((cnt % osal_task_sequencers[i].period_cnts) == 0)
             {
@@ -520,5 +611,6 @@ static void osal_task_generic_sequencer(const INT32 signal)
             }
         }
     }
+    osal_mutex_unlock(&os_sched_mutex);
     cnt++;
 }

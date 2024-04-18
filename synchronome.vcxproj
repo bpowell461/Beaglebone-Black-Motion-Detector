@@ -103,7 +103,7 @@
       <AdditionalIncludeDirectories>C:\git\RTES\utils\osal;C:\git\RTES\utils\syslog;C:\git\RTES\utils\types;C:\git\RTES\utils\ringbuffer;C:\git\RTES\src\camera;C:\git\RTES\src\nvm;C:\git\RTES\src\frameBuffer</AdditionalIncludeDirectories>
       <CLanguageStandard>gnu99</CLanguageStandard>
       <CppLanguageStandard>gnu++03</CppLanguageStandard>
-      <PreprocessorDefinitions>BEAGLEBONE; DEBUG</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BEAGLEBONE; DEBUG; SIMPLE_TASKS</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>-pthread;-lrt;%(AdditionalDependencies)</AdditionalDependencies>

@@ -26,11 +26,7 @@ typedef UINT16 osal_stack_t;
 
 typedef void *(*osal_func)(void *);
 
-typedef struct
-{
-    UINT08  priority;
-    UINT08  subpriority;
-}osal_priority_t;
+typedef UINT08 osal_priority_t;
 
 typedef struct
 {
