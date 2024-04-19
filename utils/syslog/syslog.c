@@ -23,7 +23,7 @@
 #define MONTH_SIZE              (3u)
 #define DAY_SIZE                (2u)
 #define TIME_SIZE               (8u)
-#define SYSLOG_FILE_NAME_SIZE   (19 + NULL_TERM_SIZE)
+#define SYSLOG_FILE_NAME_SIZE   (19u + NULL_TERM_SIZE)
 
 /* Types */
 typedef int (*printFunc_t)(const char *, ...);
@@ -56,7 +56,7 @@ sys_result_e syslog_init(char* assignment, const int courseNum, const int assign
         char buf[SYSLOG_FILE_NAME_SIZE];
         snprintf(buf, sizeof(buf), "syslog-prog-%i.%i.txt", courseNum, assignmentNum);
 
-        trace_fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC);
+        trace_fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK);
         if (trace_fd < 0)
             return SYS_FAILURE;
 

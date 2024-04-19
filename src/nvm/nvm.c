@@ -34,7 +34,7 @@ void *nvm_task(void *threadp)
     while(DEF_TRUE)
     {
         SYS_TRACE("Getting frame");
-        if (SYS_SUCCESS != framebuffer_getframe(nvm_fd))
+        if (SYS_FAILURE == framebuffer_getframe(nvm_fd))
         {
             SYS_TRACE("ERR: GET FRAME");
         }
@@ -43,6 +43,7 @@ void *nvm_task(void *threadp)
         {
             break;
         }
+
         osal_task_delay(id);
     }
 

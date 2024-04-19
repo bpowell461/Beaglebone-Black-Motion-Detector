@@ -40,8 +40,9 @@ static sys_result_e framebuffer_ioctl(INT32 fd, UINT32 request, void *arg);
 static UINT32       framebuffer_requestbuffers(UINT08 count);
 static UINT32       framebuffer_mapbuffers(UINT08 idx, UINT08 **bufferPtr);
 static UINT32       framebuffer_queueframe(UINT08 idx);
-static UINT32       framebuffer_dequeueframe(void);
+static sys_result_e framebuffer_dequeueframe(UINT32 *readPtr);
 static sys_result_e framebuffer_save(UINT32 index);
+static INT32 file_write_blocking(INT32 fd, const void *buf, size_t size);
 
 sys_result_e framebuffer_init(INT32 *fd)
 {
@@ -83,6 +84,7 @@ sys_result_e framebuffer_getframe(INT32 fd)
 {
     fd_set fds;
     UINT32 readIdx;
+    sys_result_e ret;
 
     FD_ZERO(&fds);
     FD_SET(fd, &fds);
@@ -93,13 +95,16 @@ sys_result_e framebuffer_getframe(INT32 fd)
 
     osal_mutex_lock(&mtx);
 
-    readIdx = framebuffer_dequeueframe();
-    framebuffer_save(readIdx);
-    frameIdx++;
-
+    ret = framebuffer_dequeueframe(&readIdx);
+    if (SYS_SUCCESS == ret)
+    {
+        framebuffer_save(readIdx);
+        frameIdx++;
+    }
+    
     osal_mutex_unlock(&mtx);
 
-    return SYS_SUCCESS;
+    return ret;
 }
 
 UINT16 framebuffer_getframeidx(void)
@@ -183,7 +188,7 @@ static UINT32 framebuffer_queueframe(UINT08 idx)
     return bufd.bytesused;
 }
 
-static UINT32 framebuffer_dequeueframe(void)
+static sys_result_e framebuffer_dequeueframe(UINT32 *readPtr)
 {
     struct v4l2_buffer buf = { 0 };
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -194,7 +199,8 @@ static UINT32 framebuffer_dequeueframe(void)
         return SYS_FAILURE;
     }
 
-    return buf.index;
+    *readPtr = buf.index;
+    return SYS_SUCCESS;
 }
 
 
@@ -226,16 +232,19 @@ static sys_result_e framebuffer_save(UINT32 index)
 static sys_result_e framebuffer_save(UINT32 index)
 {
     char out_name[256];
+    char image_header[16];
     INT32 ret;
     sprintf(out_name, IMAGE_FILE("frame%03d"), frameIdx);
-    INT32 file = open(out_name, O_RDWR | O_CREAT, 0666);
+    INT32 file = open(out_name, O_RDWR | O_CREAT | O_TRUNC | O_NONBLOCK, 0666);
     if (0 > file)
     {
         SYS_TRACE("ERR: FILE OPEN");
         return SYS_FAILURE;
     }
 
-    ret = write(file, buffers[index].start, buffers[index].size);
+    /*snprintf(image_header, 16, "P6\n%d %d 255\n", PIXEL_WIDTH, PIXEL_HEIGHT);
+    write(file, image_header, 16);*/
+    ret = file_write_blocking(file, buffers[index].start, buffers[index].size);
     if (0 > ret)
     {
         SYS_TRACE("ERR: WRITE");
@@ -245,5 +254,22 @@ static sys_result_e framebuffer_save(UINT32 index)
     close(file);
 
     return SYS_SUCCESS;
+}
+
+
+static INT32 file_write_blocking(INT32 fd, const void *buf, size_t size)
+{
+    ssize_t wBytes = 0;
+    size_t sizeBuf = size;
+    do
+    {
+        wBytes += write(fd, buf, sizeBuf);
+
+        if(wBytes > 0)
+            sizeBuf -= (size_t)wBytes;
+
+    } while (wBytes < size);
+
+    return wBytes;
 }
 #endif
