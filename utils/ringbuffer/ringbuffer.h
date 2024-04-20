@@ -14,9 +14,9 @@
 #define ringbuffer_typedef(TYPE, NAME) \
     typedef struct { \
         TYPE        *data;\
-        UINT16      size; \
-        UINT16      readPtr; \
-        UINT16      writePtr; \
+        UINT32      size; \
+        UINT32      readPtr; \
+        UINT32      writePtr; \
     } NAME
 
 typedef enum
@@ -39,20 +39,18 @@ typedef enum
 
 #define ringbuffer_write(BUF, DATA) \
     do { \
-        BUF->data[BUF->writePtr] = DATA; \
-        BUF->writePtr = (BUF->writePtr + 1) & (BUF->size - 1); \
+        (BUF)->data[(BUF)->writePtr] = DATA; \
+        (BUF)->writePtr = ((BUF)->writePtr + 1u) & ((BUF)->size - 1u); \
     }while(0) 
 
 #define ringbuffer_read(BUF, DATA) \
     do { \
-        DATA = BUF->data[BUF->readPtr]; \
-        BUF->readPtr = (BUF->readPtr + 1) & (BUF->size - 1); \
+        DATA = (BUF)->data[(BUF)->readPtr]; \
+        (BUF)->readPtr = ((BUF)->readPtr + 1u) & ((BUF)->size - 1u); \
     }while(0)
 
-#define ringbuffer_canwrite(BUF, DATA) ((BUF->size - ringbuffer_getlen(BUF)) >= sizeof(DATA))
-
-#define ringbuffer_getlen(BUF)  ((BUF->writePtr - BUF->readPtr) & (BUF->size - 1))
-#define ringbuffer_isEmpty(BUF) (BUF->readPtr == BUF->writePtr)
-#define ringbuffer_isFull(BUF)  (ringbuffer_getlen(BUF) == (BUF->size - 1))
+#define ringbuffer_getlen(BUF)  (((BUF)->writePtr - (BUF)->readPtr) & ((BUF)->size - 1u))
+#define ringbuffer_isEmpty(BUF) (((BUF)->readPtr) == ((BUF)->writePtr))
+#define ringbuffer_isFull(BUF)  ((ringbuffer_getlen((BUF))) == ((BUF)->size - 1u))
 
 #endif /* RING_BUFFER_H_ */

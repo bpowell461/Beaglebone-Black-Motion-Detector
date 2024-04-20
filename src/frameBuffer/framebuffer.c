@@ -25,7 +25,6 @@ struct buffer {
 };
 
 static struct buffer buffers[NUM_FRAME_BUFS];
-//static struct buffer *buffers;
 
 static INT32 framebuffer_fd;
 static UINT16 frameIdx = 0;
@@ -42,7 +41,7 @@ static UINT32       framebuffer_mapbuffers(UINT08 idx, UINT08 **bufferPtr);
 static UINT32       framebuffer_queueframe(UINT08 idx);
 static sys_result_e framebuffer_dequeueframe(UINT32 *readPtr);
 static sys_result_e framebuffer_save(UINT32 index);
-static INT32 file_write_blocking(INT32 fd, const void *buf, size_t size);
+static INT32 file_write_blocking(INT32 fd, const UINT08 *buf, size_t size);
 
 sys_result_e framebuffer_init(INT32 *fd)
 {
@@ -232,8 +231,8 @@ static sys_result_e framebuffer_save(UINT32 index)
 static sys_result_e framebuffer_save(UINT32 index)
 {
     char out_name[256];
-    char image_header[16];
     INT32 ret;
+
     sprintf(out_name, IMAGE_FILE("frame%03d"), frameIdx);
     INT32 file = open(out_name, O_RDWR | O_CREAT | O_TRUNC | O_NONBLOCK, 0666);
     if (0 > file)
@@ -257,13 +256,13 @@ static sys_result_e framebuffer_save(UINT32 index)
 }
 
 
-static INT32 file_write_blocking(INT32 fd, const void *buf, size_t size)
+static INT32 file_write_blocking(INT32 fd, const UINT08 *buf, size_t size)
 {
     ssize_t wBytes = 0;
     size_t sizeBuf = size;
     do
     {
-        wBytes += write(fd, buf, sizeBuf);
+        wBytes += write(fd, &buf[wBytes], sizeBuf);
 
         if(wBytes > 0)
             sizeBuf -= (size_t)wBytes;

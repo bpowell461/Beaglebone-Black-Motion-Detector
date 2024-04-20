@@ -26,9 +26,17 @@ typedef enum
     eCAMERA_COUNT
 }camera_state_e;
 
+typedef enum
+{
+    IO_METHOD_READ,
+    IO_METHOD_MMAP,
+    IO_METHOD_USERPTR
+}v4l2_io_e;
+
 /** Static Variables **/
 static INT32 camera_fd;
 static UINT08 write_errors = 0;
+static UINT08 num_writes = 0;
 
 static char *dev_name = "/dev/video0";
 
@@ -43,11 +51,35 @@ void camera_init(INT32 *fd)
 {
     /* V4L2 Format Vars */
     struct v4l2_format  fmt;
+    struct v4l2_capability cap;
+    v4l2_io_e io = IO_METHOD_READ;
 
     camera_fd = open(dev_name, O_RDWR | O_NONBLOCK, 0);
     if (camera_fd < 0) {
         SYS_TRACE("ERR: Cannot open device");
         exit(EXIT_FAILURE);
+    }
+
+    camera_ioctl(camera_fd, VIDIOC_QUERYCAP, &cap);
+
+    switch (io)
+    {
+        case IO_METHOD_READ:
+            if (!(cap.capabilities & V4L2_CAP_READWRITE))
+            {
+                SYS_TRACE("%s does not support read i/o\n", dev_name);
+                exit(EXIT_FAILURE);
+            }
+            break;
+
+        case IO_METHOD_MMAP:
+        case IO_METHOD_USERPTR:
+            if (!(cap.capabilities & V4L2_CAP_STREAMING))
+            {
+                SYS_TRACE("%s does not support streaming i/o\n", dev_name);
+                exit(EXIT_FAILURE);
+            }
+            break;
     }
 
     /* Setting camera format  */
@@ -82,13 +114,11 @@ void *camera_task(void *threadp)
 
     osal_task_wait_start(id);
 
-    framebuffer_writeframe(camera_fd);
-
     camera_capturestate(eCAMERA_ON);
 
     while(DEF_TRUE)
     {
-        if (SAVED_FRAMES_MAX <= framebuffer_getframeidx())
+        if (SAVED_FRAMES_MAX <= num_writes)
         {
             break;
         }
@@ -102,6 +132,7 @@ void *camera_task(void *threadp)
         }
         else
         {
+            num_writes++;
             write_errors = 0;
         }
 
