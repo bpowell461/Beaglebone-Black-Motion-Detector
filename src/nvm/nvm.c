@@ -25,25 +25,21 @@ void nvm_init(INT32 *fd)
 
 void *nvm_task(void *threadp)
 {
-    osal_task_start_args_t args = *(osal_task_start_args_t *)&threadp;
+    osal_task_start_args_t args = *(osal_task_start_args_t *)threadp;
 
     osal_id_t id = args.task_id;
 
-    SYS_TRACE("NVM Task Waiting for Start...");
+    SYS_TRACE("NVM Task (ID: %u) Waiting for Start...", id);
 
     osal_task_wait_start(id);
 
     while(DEF_TRUE)
     {
         SYS_TRACE("Getting frame(s)");
-        for (UINT08 i = 0; i < SAVE_ITERATIONS; i++)
-        {
-            if (SYS_SUCCESS != framebuffer_getframe(nvm_fd))
-            {
-                SYS_TRACE("ERR: GET FRAME");
-                break;
-            }
 
+        if (SYS_SUCCESS == framebuffer_getframe(nvm_fd))
+        {
+            SYS_TRACE("Found frame");
             if (framebuffer_getframeidx() >= SAVED_FRAMES_MAX)
             {
                 exit_task = DEF_TRUE;
@@ -51,8 +47,11 @@ void *nvm_task(void *threadp)
             }
         }
 
+        SYS_TRACE("No frames found. Sleeping...");
+
         if (exit_task)
         {
+            SYS_TRACE("Maximum frames saved reached");
             break;
         }
         else

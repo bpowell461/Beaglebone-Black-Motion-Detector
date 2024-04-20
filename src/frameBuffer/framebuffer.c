@@ -58,7 +58,7 @@ sys_result_e framebuffer_init(INT32 *fd)
     }
 
     select_timeout.tv_sec = 0;
-    select_timeout.tv_usec = (5 * USEC_PER_MSEC);
+    select_timeout.tv_usec = (50 * USEC_PER_MSEC);
 
     return SYS_SUCCESS;
 }
@@ -255,19 +255,34 @@ static sys_result_e framebuffer_save(UINT32 index)
     return SYS_SUCCESS;
 }
 
-
+static char pgm_header[] = "P5\nRESERVED\n640 480\n255\n";
 static INT32 file_write_blocking(INT32 fd, const UINT08 *buf, size_t size)
 {
     ssize_t wBytes = 0;
-    size_t sizeBuf = size;
+    size_t sizeBuf = size >> 1u;
+    UINT08 j = 0;
+
+    UINT08 processBuf[(640u * 480u)];
+
+    for (UINT08 i = 0; i < size; i = i + 4u)
+    {
+        processBuf[j] = buf[i];
+        processBuf[j + 1] = buf[i + 2];
+        j++;
+        j++;
+    }
+
+    // subtract 1 because sizeof for string includes null terminator
+    write(fd, pgm_header, sizeof(pgm_header) - 1);
+
     do
     {
-        wBytes += write(fd, &buf[wBytes], sizeBuf);
+        wBytes += write(fd, &processBuf[wBytes], sizeBuf);
 
         if(wBytes > 0)
             sizeBuf -= (size_t)wBytes;
 
-    } while (wBytes < size);
+    } while (wBytes < (size >> 1u));
 
     return wBytes;
 }

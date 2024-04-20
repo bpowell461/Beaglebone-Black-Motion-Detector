@@ -52,7 +52,7 @@ void camera_init(INT32 *fd)
     /* V4L2 Format Vars */
     struct v4l2_format  fmt;
     struct v4l2_capability cap;
-    v4l2_io_e io = IO_METHOD_READ;
+    v4l2_io_e io = IO_METHOD_MMAP;
 
     camera_fd = open(dev_name, O_RDWR | O_NONBLOCK, 0);
     if (camera_fd < 0) {
@@ -110,9 +110,11 @@ void *camera_task(void *threadp)
 
     osal_id_t id = args.task_id;
 
-    SYS_TRACE("Camera Task Waiting for Start...");
+    SYS_TRACE("Camera Task (ID: %u) Waiting for Start...", id);
 
     osal_task_wait_start(id);
+
+    framebuffer_writeframe(camera_fd);
 
     camera_capturestate(eCAMERA_ON);
 

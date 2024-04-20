@@ -592,18 +592,18 @@ static void* osal_signal_handler_task(void* threadp)
 
 static inline void osal_task_generic_sequencer(void)
 {
-    static unsigned long long cnt = 0;
+    static unsigned long long tick = 0;
     osal_mutex_lock(&os_sched_mutex);
     for (UINT32 i = 0; i < MAX_TASKS; i++)
     {
         if (osal_task_sequencers[i].task_state != TASKSTATE_UNUSED && osal_task_sequencers[i].period_cnts != 0)
         {
-            if ((cnt % osal_task_sequencers[i].period_cnts) == 0)
+            if ((tick % osal_task_sequencers[i].period_cnts) == 0)
             {
                 osal_task_start((osal_id_t)i);
             }
         }
     }
     osal_mutex_unlock(&os_sched_mutex);
-    cnt++;
+    tick++;
 }
