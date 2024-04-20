@@ -18,7 +18,6 @@
 #define PIXEL_FORMAT_FIELD  (V4L2_FIELD_INTERLACED)
 #define PIXEL_WIDTH     (640)
 #define PIXEL_HEIGHT    (480)
-#define PIXEL_BYTES     (614400U)
 #define IMAGE_EXT       ".raw"
 
 #elif defined(CAMERA_USE_MJPEG)
