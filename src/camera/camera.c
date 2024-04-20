@@ -29,6 +29,7 @@ typedef enum
 /** Static Variables **/
 static INT32 camera_fd;
 static UINT08 write_errors = 0;
+static UINT08 num_writes = 0;
 
 static char *dev_name = "/dev/video0";
 
@@ -82,13 +83,11 @@ void *camera_task(void *threadp)
 
     osal_task_wait_start(id);
 
-    framebuffer_writeframe(camera_fd);
-
     camera_capturestate(eCAMERA_ON);
 
     while(DEF_TRUE)
     {
-        if (SAVED_FRAMES_MAX <= framebuffer_getframeidx())
+        if (SAVED_FRAMES_MAX <= num_writes)
         {
             break;
         }
@@ -102,6 +101,7 @@ void *camera_task(void *threadp)
         }
         else
         {
+            num_writes++;
             write_errors = 0;
         }
 

@@ -6,11 +6,13 @@
 #include "syslog.h"
 
 /** Macros **/
+#define SAVE_ITERATIONS (1u)
 
 /** Type Definitions **/
 
 /** Static Variables **/
 static INT32 nvm_fd;
+static BOOL_T exit_task = DEF_FALSE;
 
 /** Global Variables **/
 
@@ -33,18 +35,30 @@ void *nvm_task(void *threadp)
 
     while(DEF_TRUE)
     {
-        SYS_TRACE("Getting frame");
-        if (SYS_FAILURE == framebuffer_getframe(nvm_fd))
+        SYS_TRACE("Getting frame(s)");
+        for (UINT08 i = 0; i < SAVE_ITERATIONS; i++)
         {
-            SYS_TRACE("ERR: GET FRAME");
+            if (SYS_SUCCESS != framebuffer_getframe(nvm_fd))
+            {
+                SYS_TRACE("ERR: GET FRAME");
+                break;
+            }
+
+            if (framebuffer_getframeidx() >= SAVED_FRAMES_MAX)
+            {
+                exit_task = DEF_TRUE;
+                break;
+            }
         }
 
-        if (framebuffer_getframeidx() >= SAVED_FRAMES_MAX)
+        if (exit_task)
         {
             break;
         }
-
-        osal_task_delay(id);
+        else
+        {
+            osal_task_delay(id);
+        }
     }
 
     SYS_TRACE("NVM Task Exiting...");
