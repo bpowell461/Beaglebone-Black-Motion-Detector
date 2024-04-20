@@ -125,15 +125,13 @@ void *camera_task(void *threadp)
             break;
         }
 
-        SYS_TRACE("Writing frame");
-
         if (SYS_SUCCESS != framebuffer_writeframe(camera_fd))
         {
             write_errors++;
-            SYS_TRACE("ERR: WRITEFRAME");
         }
         else
         {
+            SYS_TRACE("Writing frame");
             num_writes++;
             write_errors = 0;
         }

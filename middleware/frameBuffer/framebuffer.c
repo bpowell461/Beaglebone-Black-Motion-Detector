@@ -76,7 +76,7 @@ sys_result_e framebuffer_writeframe(INT32 fd)
     osal_mutex_unlock(&mtx);
 
     
-    return (bytes ? SYS_SUCCESS : SYS_FAILURE);
+    return (bytes ? SYS_SUCCESS : SYS_IGNORE);
 }
 
 sys_result_e framebuffer_getframe(INT32 fd)
@@ -85,9 +85,12 @@ sys_result_e framebuffer_getframe(INT32 fd)
     UINT32 readIdx;
     sys_result_e ret;
 
+    /* Apparently select MAY modify the timeval struct */
+    struct timeval temp = select_timeout; 
+
     FD_ZERO(&fds);
     FD_SET(fd, &fds);
-    int r = select(fd + 1, &fds, NULL, NULL, &select_timeout);
+    int r = select(fd + 1, &fds, NULL, NULL, &temp);
     if (-1 == r) {
         return SYS_IGNORE;
     }
@@ -181,6 +184,7 @@ static UINT32 framebuffer_queueframe(UINT08 idx)
     if (SYS_SUCCESS != framebuffer_ioctl(framebuffer_fd, VIDIOC_QBUF, &bufd))
     {
         osal_mutex_unlock(&mtx);
+        SYS_TRACE("ERR: FRAMEBUFFER QBUF");
         return SYS_FAILURE;
     }
 
@@ -234,7 +238,7 @@ static sys_result_e framebuffer_save(UINT32 index)
     INT32 ret;
 
     sprintf(out_name, IMAGE_FILE("frame%03d"), frameIdx);
-    INT32 file = open(out_name, O_RDWR | O_CREAT | O_TRUNC | O_NONBLOCK, 0666);
+    INT32 file = open(out_name, O_RDWR | O_CREAT | O_TRUNC, 0666);
     if (0 > file)
     {
         SYS_TRACE("ERR: FILE OPEN");
@@ -255,21 +259,24 @@ static sys_result_e framebuffer_save(UINT32 index)
     return SYS_SUCCESS;
 }
 
-static char pgm_header[] = "P5\nRESERVED\n640 480\n255\n";
 static INT32 file_write_blocking(INT32 fd, const UINT08 *buf, size_t size)
 {
+    static UINT08 processBuf[(PIXEL_WIDTH * PIXEL_HEIGHT)];
+
+    /* Bytes written to file */
     ssize_t wBytes = 0;
+
+    /* Divide by 2 */
     size_t sizeBuf = size >> 1u;
-    UINT08 j = 0;
 
-    UINT08 processBuf[(640u * 480u)];
+    UINT32 i = 0;
+    char pgm_header[] = "P5\nRESERVED\n640 480\n255\n";
 
-    for (UINT08 i = 0; i < size; i = i + 4u)
+    for (UINT32 idx = 0; idx < ((PIXEL_WIDTH * PIXEL_HEIGHT)); idx++)
     {
-        processBuf[j] = buf[i];
-        processBuf[j + 1] = buf[i + 2];
-        j++;
-        j++;
+        processBuf[idx] = buf[i];
+
+        i = i + 2u;
     }
 
     // subtract 1 because sizeof for string includes null terminator
@@ -282,7 +289,7 @@ static INT32 file_write_blocking(INT32 fd, const UINT08 *buf, size_t size)
         if(wBytes > 0)
             sizeBuf -= (size_t)wBytes;
 
-    } while (wBytes < (size >> 1u));
+    } while (wBytes < (size >> 1));
 
     return wBytes;
 }
