@@ -502,15 +502,8 @@ sys_result_e osal_stop_scheduler(void)
         return SYS_SUCCESS;
 
     INT32 ret;
-    struct sigaction action;
 
     osal_mutex_lock(&os_sched_mutex);
-
-    action.sa_handler = SIG_DFL;
-
-    sigemptyset(&action.sa_mask);
-    action.sa_flags = 0;
-    sigaction(SIGALRM, &action, NULL);
 
     itval.it_interval.tv_sec = 0;
     itval.it_interval.tv_nsec = 0;
