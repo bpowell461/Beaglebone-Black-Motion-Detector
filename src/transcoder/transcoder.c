@@ -56,12 +56,13 @@ void *transcoder_task(void *threadp)
 
 static void read_frames(void)
 {
-    UINT32 *framePtr = DEF_NULL_PTR;
-    if (SYS_SUCCESS == framebuffer_getframe(camera_fd, framePtr))
+    /* Two memcpy operations are happening here, this is a quick and dirty solution but it needs to be optimized */
+    frame_t framePtr;
+    if (SYS_SUCCESS == framebuffer_getframe(camera_fd, framePtr.bytes))
     {
         if (!ringbuffer_isFull(&incomingBuffer))
         {
-            ringbuffer_write(&incomingBuffer, *(frame_t *)framePtr);
+            ringbuffer_write(&incomingBuffer, framePtr);
         }
     }
 }

@@ -76,13 +76,14 @@ sys_result_e framebuffer_writeframe(INT32 fd)
     return (bytes ? SYS_SUCCESS : SYS_IGNORE);
 }
 
-sys_result_e framebuffer_getframe(INT32 fd, UINT32 *readIdx)
+sys_result_e framebuffer_getframe(INT32 fd, UINT08 *frame)
 {
     fd_set fds;
     sys_result_e ret;
+    UINT32 readIdx;
 
     /* Apparently select MAY modify the timeval struct */
-    struct timeval temp = select_timeout; 
+    struct timeval temp = select_timeout;
 
     FD_ZERO(&fds);
     FD_SET(fd, &fds);
@@ -93,7 +94,10 @@ sys_result_e framebuffer_getframe(INT32 fd, UINT32 *readIdx)
 
     osal_mutex_lock(&mtx);
 
-    ret = framebuffer_dequeueframe(readIdx);
+    ret = framebuffer_dequeueframe(&readIdx);
+
+    if(SYS_SUCCESS == ret)
+        memcpy(frame, buffers[readIdx].start, buffers[readIdx].size);
     
     osal_mutex_unlock(&mtx);
 

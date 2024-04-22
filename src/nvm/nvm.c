@@ -13,7 +13,6 @@
 /** Static Variables **/
 static INT32 nvm_fd;
 static BOOL_T exit_task = DEF_FALSE;
-static UINT08 saved_frames = 0;
 
 /** Global Variables **/
 

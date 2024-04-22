@@ -20,7 +20,7 @@ typedef struct
 
 static rgbImageBuffer_t imageBuffer;
 static buffer_mtx_handle_t buf_mtx_handle;
-static UINT08 frameIdx;
+static UINT08 frameIdx = 0;
 
 static BOOL_T imagebuffer_initialized = DEF_FALSE;
 
@@ -217,29 +217,20 @@ UINT08 image_getsavedframes(void)
 
 static INT32 file_write_blocking(INT32 fd, const UINT08 *buf, size_t size)
 {
-    static UINT08 processBuf[(PIXEL_WIDTH * PIXEL_HEIGHT)];
-
     /* Bytes written to file */
     ssize_t wBytes = 0;
 
     size_t sizeBuf = size;
 
     UINT32 i = 0;
-    char header[] = "P6\nRESERVED\n320 240\n255\n";
-
-    for (UINT32 idx = 0; idx < ((PIXEL_WIDTH * PIXEL_HEIGHT)); idx++)
-    {
-        processBuf[idx] = buf[i];
-
-        i = i + 2u;
-    }
+    char header[] = IMAGE_HEADER;
 
     // subtract 1 because sizeof for string includes null terminator
     write(fd, header, sizeof(header) - 1);
 
     do
     {
-        wBytes += write(fd, &processBuf[wBytes], sizeBuf);
+        wBytes += write(fd, &buf[wBytes], sizeBuf);
 
         if (wBytes > 0)
             sizeBuf -= (size_t)wBytes;
