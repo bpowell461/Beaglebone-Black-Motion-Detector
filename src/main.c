@@ -5,6 +5,7 @@
 #include "camera.h"
 #include "nvm.h"
 #include "framebuffer.h"
+#include "transcoder.h"
 
 #define NUM_THREADS 2
 
@@ -36,12 +37,20 @@ int main(void)
     camera_init(&v4l_fd);
     framebuffer_init(&v4l_fd);
     nvm_init(&v4l_fd);
+    transcoder_init(&v4l_fd);
 
     osal_priority_t prio = 90;
     osal_id_t camera_id;
     if (SYS_SUCCESS != osal_task_create(&camera_id, "camera", 0, prio, camera_task, TASK_RATE_1HZ, NULL))
     {
         SYS_TRACE("ERR: CAMERA TASK CREATE");
+    }
+
+    prio = 85;
+    osal_id_t transcoder_id;
+    if (SYS_SUCCESS != osal_task_create(&transcoder_id, "transcoder", 0, prio, transcoder_task, (2 * TASK_RATE_1HZ), NULL))
+    {
+        SYS_TRACE("ERR: NVM TASK CREATE");
     }
 
     prio = 80;
@@ -71,6 +80,7 @@ int main(void)
 
     osal_task_wait_all();
 
+    framebuffer_deinit();
     osal_deinit();
  
     return 0;

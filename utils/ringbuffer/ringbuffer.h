@@ -37,17 +37,21 @@ typedef enum
     BUF.readPtr = 0; \
     } while(0)
 
+#define ringbuffer_inc_writeptr(BUF)     ((BUF)->writePtr = ((BUF)->writePtr + 1u) & ((BUF)->size - 1u))
 #define ringbuffer_write(BUF, DATA) \
     do { \
         (BUF)->data[(BUF)->writePtr] = DATA; \
-        (BUF)->writePtr = ((BUF)->writePtr + 1u) & ((BUF)->size - 1u); \
+        ringbuffer_inc_writeptr((BUF)); \
     }while(0) 
 
+#define ringbuffer_inc_readptr(BUF)     ((BUF)->readPtr = ((BUF)->readPtr + 1u) & ((BUF)->size - 1u))
 #define ringbuffer_read(BUF, DATA) \
     do { \
         DATA = (BUF)->data[(BUF)->readPtr]; \
-        (BUF)->readPtr = ((BUF)->readPtr + 1u) & ((BUF)->size - 1u); \
+        ringbuffer_inc_readptr((BUF)); \
     }while(0)
+
+#define ringbuffer_read_zc(BUF, DATA)   (DATA = &((BUF)->data[(BUF)->readPtr]))
 
 #define ringbuffer_getlen(BUF)  (((BUF)->writePtr - (BUF)->readPtr) & ((BUF)->size - 1u))
 #define ringbuffer_isEmpty(BUF) (((BUF)->readPtr) == ((BUF)->writePtr))

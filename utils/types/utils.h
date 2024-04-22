@@ -21,6 +21,9 @@
 
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
 
+#define CLAMP_UPPER(x, y) ((x) = (x) > (y) ? (y) : (x))
+#define CLAMP_LOWER(x, y) ((x) = (x) < (y) ? (y) : (x))
+
 #define IS_ERROR(x)     ((x) < 0 ? SYS_FAILURE : SYS_SUCCESS)
 
 #endif

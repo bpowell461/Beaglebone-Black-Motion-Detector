@@ -4,6 +4,7 @@
 #include <linux/videodev2.h>
 
 #define CAMERA_USE_PPM
+#define SAVED_FRAMES_MAX    (5U)
 
 #if defined(CAMERA_USE_YUV)
 #define PIXEL_FORMAT_CAMERA (V4L2_PIX_FMT_YUYV)
@@ -15,10 +16,11 @@
 #elif defined(CAMERA_USE_PPM)
 
 #define PIXEL_FORMAT_CAMERA (V4L2_PIX_FMT_YUYV)
-#define PIXEL_FORMAT_FIELD  (V4L2_FIELD_INTERLACED)
-#define PIXEL_WIDTH     (640)
-#define PIXEL_HEIGHT    (480)
-#define IMAGE_EXT       ".pgm"
+#define PIXEL_FORMAT_FIELD  (V4L2_FIELD_NONE)
+#define PIXEL_WIDTH     (320)
+#define PIXEL_HEIGHT    (240)
+#define FRAME_SIZE      (PIXEL_WIDTH * PIXEL_HEIGHT * 2)
+#define IMAGE_EXT       ".ppm"
 
 #elif defined(CAMERA_USE_MJPEG)
 
@@ -26,7 +28,7 @@
 #define PIXEL_FORMAT_FIELD  (V4L2_FIELD_INTERLACED)
 #define PIXEL_WIDTH     (640)
 #define PIXEL_HEIGHT    (480)
-#define IMAGE_EXT       ".mjpg"
+#define IMAGE_EXT       ".jpg"
 
 #else
 
@@ -35,5 +37,22 @@
 #endif
 
 #define IMAGE_FILE(x) (x IMAGE_EXT)
+
+#define RGB_FRAME_SIZE_BYTES (PIXEL_WIDTH * PIXEL_HEIGHT * 3)
+
+/* Custom Image Formats */
+#define V4L2_PIX_FMT_RGB888 (v4l2_fourcc('R', 'G', 'B', '8'))
+
+/* This is the "raw" frame size */
+typedef struct
+{
+    UINT08 bytes[FRAME_SIZE];
+}frame_t;
+
+/* Modified frame size using RGB888 */
+typedef struct
+{
+    UINT08 bytes[RGB_FRAME_SIZE_BYTES];
+}rgb_frame_t;
 
 #endif

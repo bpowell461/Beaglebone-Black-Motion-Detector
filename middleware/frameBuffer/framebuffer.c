@@ -27,7 +27,6 @@ struct buffer {
 static struct buffer buffers[NUM_FRAME_BUFS];
 
 static INT32 framebuffer_fd;
-static UINT16 frameIdx = 0;
 
 static UINT08 writePtr = 0;
 
@@ -40,8 +39,6 @@ static UINT32       framebuffer_requestbuffers(UINT08 count);
 static UINT32       framebuffer_mapbuffers(UINT08 idx, UINT08 **bufferPtr);
 static UINT32       framebuffer_queueframe(UINT08 idx);
 static sys_result_e framebuffer_dequeueframe(UINT32 *readPtr);
-static sys_result_e framebuffer_save(UINT32 index);
-static INT32 file_write_blocking(INT32 fd, const UINT08 *buf, size_t size);
 
 sys_result_e framebuffer_init(INT32 *fd)
 {
@@ -79,10 +76,9 @@ sys_result_e framebuffer_writeframe(INT32 fd)
     return (bytes ? SYS_SUCCESS : SYS_IGNORE);
 }
 
-sys_result_e framebuffer_getframe(INT32 fd)
+sys_result_e framebuffer_getframe(INT32 fd, UINT32 *readIdx)
 {
     fd_set fds;
-    UINT32 readIdx;
     sys_result_e ret;
 
     /* Apparently select MAY modify the timeval struct */
@@ -97,21 +93,11 @@ sys_result_e framebuffer_getframe(INT32 fd)
 
     osal_mutex_lock(&mtx);
 
-    ret = framebuffer_dequeueframe(&readIdx);
-    if (SYS_SUCCESS == ret)
-    {
-        framebuffer_save(readIdx);
-        frameIdx++;
-    }
+    ret = framebuffer_dequeueframe(readIdx);
     
     osal_mutex_unlock(&mtx);
 
     return ret;
-}
-
-UINT16 framebuffer_getframeidx(void)
-{
-    return frameIdx;
 }
 
 sys_result_e framebuffer_deinit(void)
@@ -205,92 +191,3 @@ static sys_result_e framebuffer_dequeueframe(UINT32 *readPtr)
     *readPtr = buf.index;
     return SYS_SUCCESS;
 }
-
-
-#if defined(USE_ALT_FILE_SAVE)
-
-static sys_result_e framebuffer_save(UINT32 index)
-{
-    FILE *fout;
-    char out_name[256];
-    sprintf(out_name, "frame%03d.ppm", frameIdx);
-    fout = fopen(out_name, "w");
-    if (!fout)
-    {
-        SYS_TRACE("Cannot open image");
-        return (SYS_FAILURE);
-    }
-    fprintf(fout, "P6\n%d %d 255\n", PIXEL_WIDTH, PIXEL_HEIGHT);
-    if (0 > fwrite(buffers[index].start, buffers[index].size, 1, fout))
-    {
-        SYS_TRACE("Failed to write to file!");
-    }
-    fclose(fout);
-
-    return SYS_SUCCESS;
-}
-
-#else
-
-static sys_result_e framebuffer_save(UINT32 index)
-{
-    char out_name[256];
-    INT32 ret;
-
-    sprintf(out_name, IMAGE_FILE("frame%03d"), frameIdx);
-    INT32 file = open(out_name, O_RDWR | O_CREAT | O_TRUNC, 0666);
-    if (0 > file)
-    {
-        SYS_TRACE("ERR: FILE OPEN");
-        return SYS_FAILURE;
-    }
-
-    /*snprintf(image_header, 16, "P6\n%d %d 255\n", PIXEL_WIDTH, PIXEL_HEIGHT);
-    write(file, image_header, 16);*/
-    ret = file_write_blocking(file, buffers[index].start, buffers[index].size);
-    if (0 > ret)
-    {
-        SYS_TRACE("ERR: WRITE");
-        return SYS_FAILURE;
-    }
-
-    close(file);
-
-    return SYS_SUCCESS;
-}
-
-static INT32 file_write_blocking(INT32 fd, const UINT08 *buf, size_t size)
-{
-    static UINT08 processBuf[(PIXEL_WIDTH * PIXEL_HEIGHT)];
-
-    /* Bytes written to file */
-    ssize_t wBytes = 0;
-
-    /* Divide by 2 */
-    size_t sizeBuf = size >> 1u;
-
-    UINT32 i = 0;
-    char pgm_header[] = "P5\nRESERVED\n640 480\n255\n";
-
-    for (UINT32 idx = 0; idx < ((PIXEL_WIDTH * PIXEL_HEIGHT)); idx++)
-    {
-        processBuf[idx] = buf[i];
-
-        i = i + 2u;
-    }
-
-    // subtract 1 because sizeof for string includes null terminator
-    write(fd, pgm_header, sizeof(pgm_header) - 1);
-
-    do
-    {
-        wBytes += write(fd, &processBuf[wBytes], sizeBuf);
-
-        if(wBytes > 0)
-            sizeBuf -= (size_t)wBytes;
-
-    } while (wBytes < (size >> 1));
-
-    return wBytes;
-}
-#endif
