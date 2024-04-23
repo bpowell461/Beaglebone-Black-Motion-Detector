@@ -40,14 +40,18 @@ void *nvm_task(void *threadp)
     {
         SYS_TRACE("Getting frame(s)");
 
-        if (SYS_SUCCESS == imagebuffer_startread(save_frame))
+        if (SYS_SUCCESS == imagebuffer_startread(&save_frame))
         {
             SYS_TRACE("Found frame");
             if (SYS_SUCCESS != image_save(save_frame->bytes, RGB_FRAME_SIZE_BYTES))
             {
                 SYS_TRACE("ERR: SAVING FILE");
             }
-            imagebuffer_endread();
+            else
+            {
+                imagebuffer_endread();
+            }
+            
 
             if (image_getsavedframes() >= SAVED_FRAMES_MAX)
             {

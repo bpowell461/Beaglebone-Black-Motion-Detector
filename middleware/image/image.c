@@ -40,14 +40,14 @@ sys_result_e imagebuffer_init(void)
 
     return SYS_SUCCESS;
 }
-sys_result_e imagebuffer_startread(rgb_frame_t *frame)
+sys_result_e imagebuffer_startread(rgb_frame_t **frame)
 {
     sys_result_e ret;
     osal_mutex_lock(&buf_mtx_handle.read_mtx);
 
     if (!ringbuffer_isEmpty(&imageBuffer))
     {
-        ringbuffer_read_zc(&imageBuffer, frame);
+        ringbuffer_read_zc(&imageBuffer, *frame);
         ret = SYS_SUCCESS;
     }
     else

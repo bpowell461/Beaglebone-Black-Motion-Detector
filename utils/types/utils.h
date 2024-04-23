@@ -20,7 +20,10 @@
 #define NSEC_PER_SEC  (MSEC_PER_SEC*USEC_PER_MSEC*NSEC_PER_USEC)
 
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
-#define STR(s)  #s
+
+/* To get a proper pre-processor string, you need two levels of macros */
+#define ISTR(s) #s
+#define STR(s)  ISTR(s)
 
 #define CLAMP_UPPER(x, y) ((x) = (x) > (y) ? (y) : (x))
 #define CLAMP_LOWER(x, y) ((x) = (x) < (y) ? (y) : (x))
