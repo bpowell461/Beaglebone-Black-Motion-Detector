@@ -21,6 +21,13 @@
 
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
 
+/* To get a proper pre-processor string, you need two levels of macros */
+#define ISTR(s) #s
+#define STR(s)  ISTR(s)
+
+#define CLAMP_UPPER(x, y) ((x) = (x) > (y) ? (y) : (x))
+#define CLAMP_LOWER(x, y) ((x) = (x) < (y) ? (y) : (x))
+
 #define IS_ERROR(x)     ((x) < 0 ? SYS_FAILURE : SYS_SUCCESS)
 
 #endif

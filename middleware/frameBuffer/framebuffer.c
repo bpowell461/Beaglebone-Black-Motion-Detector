@@ -15,9 +15,11 @@
 #include "osal.h"
 #include "camera_cfg.h"
 
-//#define USE_ALT_FILE_SAVE
+ringbuffer_typedef(frame_t, rawImageBuffer_t);
 
-#define NUM_FRAME_BUFS 16
+static rawImageBuffer_t incomingBuffer;
+
+#define NUM_FRAME_BUFS 8
 
 struct buffer {
     UINT08 *start;
@@ -27,9 +29,6 @@ struct buffer {
 static struct buffer buffers[NUM_FRAME_BUFS];
 
 static INT32 framebuffer_fd;
-static UINT16 frameIdx = 0;
-
-static UINT08 writePtr = 0;
 
 static struct timeval select_timeout;
 
@@ -38,10 +37,8 @@ static osal_mutex_t mtx;
 static sys_result_e framebuffer_ioctl(INT32 fd, UINT32 request, void *arg);
 static UINT32       framebuffer_requestbuffers(UINT08 count);
 static UINT32       framebuffer_mapbuffers(UINT08 idx, UINT08 **bufferPtr);
-static UINT32       framebuffer_queueframe(UINT08 idx);
-static sys_result_e framebuffer_dequeueframe(UINT32 *readPtr);
-static sys_result_e framebuffer_save(UINT32 index);
-static INT32 file_write_blocking(INT32 fd, const UINT08 *buf, size_t size);
+static UINT32       framebuffer_queueframe(struct v4l2_buffer *buf);
+static sys_result_e framebuffer_dequeueframe(struct v4l2_buffer *buf);
 
 sys_result_e framebuffer_init(INT32 *fd)
 {
@@ -57,58 +54,118 @@ sys_result_e framebuffer_init(INT32 *fd)
         buffers[i].size = framebuffer_mapbuffers(i, &buffers[i].start);
     }
 
+    ringbuffer_init(incomingBuffer, frame_t, NUM_FRAME_BUFS);
+
     select_timeout.tv_sec = 0;
-    select_timeout.tv_usec = (5 * USEC_PER_MSEC);
+    select_timeout.tv_usec = (900 * USEC_PER_MSEC);
+
+    return SYS_SUCCESS;
+}
+
+sys_result_e framebuffer_getframe(INT32 fd, frame_t *frame)
+{
+    if (ringbuffer_isEmpty(&incomingBuffer))
+    {
+        return SYS_IGNORE;
+    }
+
+    osal_mutex_lock(&mtx);
+
+    ringbuffer_read(&incomingBuffer, *frame);
+
+    osal_mutex_unlock(&mtx);
+
+
+    return SYS_SUCCESS;
+}
+
+sys_result_e framebuffer_getframe_ptr(INT32 fd, frame_t **frame)
+{
+    if (ringbuffer_isEmpty(&incomingBuffer))
+    {
+        return SYS_IGNORE;
+    }
+
+    osal_mutex_lock(&mtx);
+
+    ringbuffer_read_zc(&incomingBuffer, *frame);
+
+    osal_mutex_unlock(&mtx);
+
+    
+    return SYS_SUCCESS;
+}
+
+sys_result_e framebuffer_freeframe(INT32 fd, frame_t *frame)
+{
+    if (ringbuffer_isEmpty(&incomingBuffer))
+    {
+        return SYS_FAILURE;
+    }
+
+    osal_mutex_lock(&mtx);
+
+    ringbuffer_inc_readptr(&incomingBuffer);
+
+    osal_mutex_unlock(&mtx);
+
+
+    return SYS_SUCCESS;
+}
+
+sys_result_e framebuffer_initframebuffers(INT32 fd)
+{
+    struct v4l2_buffer bufd = { 0 };
+
+    for (UINT08 i = 0; i < NUM_FRAME_BUFS; i++)
+    {
+        CLEAR(bufd);
+        bufd.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        bufd.memory = V4L2_MEMORY_MMAP;
+        bufd.index = i;
+        (void)framebuffer_queueframe(&bufd);
+    }
 
     return SYS_SUCCESS;
 }
 
 sys_result_e framebuffer_writeframe(INT32 fd)
 {
-    UINT32 bytes = 0;
-    osal_mutex_lock(&mtx);
-
-    bytes = framebuffer_queueframe(writePtr);
-
-    if(bytes)
-        writePtr = (writePtr + 1U) % NUM_FRAME_BUFS;
-
-    osal_mutex_unlock(&mtx);
-
-    
-    return (bytes ? SYS_SUCCESS : SYS_FAILURE);
-}
-
-sys_result_e framebuffer_getframe(INT32 fd)
-{
     fd_set fds;
-    UINT32 readIdx;
     sys_result_e ret;
+    struct v4l2_buffer buf = { 0 };
+
+    /* Apparently select MAY modify the timeval struct */
+    struct timeval temp = select_timeout;
 
     FD_ZERO(&fds);
     FD_SET(fd, &fds);
-    int r = select(fd + 1, &fds, NULL, NULL, &select_timeout);
+    int r = select(fd + 1, &fds, NULL, NULL, &temp);
     if (-1 == r) {
         return SYS_IGNORE;
     }
 
+    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    buf.memory = V4L2_MEMORY_MMAP;
+
     osal_mutex_lock(&mtx);
 
-    ret = framebuffer_dequeueframe(&readIdx);
+    ret = framebuffer_dequeueframe(&buf);
+
     if (SYS_SUCCESS == ret)
     {
-        framebuffer_save(readIdx);
-        frameIdx++;
+        if (!ringbuffer_isFull(&incomingBuffer))
+        {
+            memcpy(incomingBuffer.data[incomingBuffer.writePtr].bytes, buffers[buf.index].start, buffers[buf.index].size);
+            ringbuffer_inc_writeptr(&incomingBuffer);
+        }
     }
+
+    framebuffer_queueframe(&buf);
     
     osal_mutex_unlock(&mtx);
 
     return ret;
-}
-
-UINT16 framebuffer_getframeidx(void)
-{
-    return frameIdx;
 }
 
 sys_result_e framebuffer_deinit(void)
@@ -172,103 +229,24 @@ static UINT32 framebuffer_mapbuffers(UINT08 idx, UINT08 **bufferPtr)
     return buf.length;
 }
 
-static UINT32 framebuffer_queueframe(UINT08 idx)
+static UINT32 framebuffer_queueframe(struct v4l2_buffer *bufd)
 {
-    struct v4l2_buffer bufd = { 0 };
-    bufd.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    bufd.memory = V4L2_MEMORY_MMAP;
-    bufd.index = idx;
-    if (SYS_SUCCESS != framebuffer_ioctl(framebuffer_fd, VIDIOC_QBUF, &bufd))
+    if (SYS_SUCCESS != framebuffer_ioctl(framebuffer_fd, VIDIOC_QBUF, bufd))
     {
-        osal_mutex_unlock(&mtx);
+        SYS_TRACE("ERR: FRAMEBUFFER QBUF");
         return SYS_FAILURE;
     }
 
-    return bufd.bytesused;
+    return bufd->bytesused;
 }
 
-static sys_result_e framebuffer_dequeueframe(UINT32 *readPtr)
+static sys_result_e framebuffer_dequeueframe(struct v4l2_buffer *buf)
 {
-    struct v4l2_buffer buf = { 0 };
-    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    buf.memory = V4L2_MEMORY_MMAP;
-    if (SYS_SUCCESS != framebuffer_ioctl(framebuffer_fd, VIDIOC_DQBUF, &buf))
+    if (SYS_SUCCESS != framebuffer_ioctl(framebuffer_fd, VIDIOC_DQBUF, buf))
     {
         SYS_TRACE("ERR: FRAMEBUFFER DQBUF");
         return SYS_FAILURE;
     }
 
-    *readPtr = buf.index;
     return SYS_SUCCESS;
 }
-
-
-#if defined(USE_ALT_FILE_SAVE)
-
-static sys_result_e framebuffer_save(UINT32 index)
-{
-    FILE *fout;
-    char out_name[256];
-    sprintf(out_name, "frame%03d.ppm", frameIdx);
-    fout = fopen(out_name, "w");
-    if (!fout)
-    {
-        SYS_TRACE("Cannot open image");
-        return (SYS_FAILURE);
-    }
-    fprintf(fout, "P6\n%d %d 255\n", PIXEL_WIDTH, PIXEL_HEIGHT);
-    if (0 > fwrite(buffers[index].start, buffers[index].size, 1, fout))
-    {
-        SYS_TRACE("Failed to write to file!");
-    }
-    fclose(fout);
-
-    return SYS_SUCCESS;
-}
-
-#else
-
-static sys_result_e framebuffer_save(UINT32 index)
-{
-    char out_name[256];
-    INT32 ret;
-
-    sprintf(out_name, IMAGE_FILE("frame%03d"), frameIdx);
-    INT32 file = open(out_name, O_RDWR | O_CREAT | O_TRUNC | O_NONBLOCK, 0666);
-    if (0 > file)
-    {
-        SYS_TRACE("ERR: FILE OPEN");
-        return SYS_FAILURE;
-    }
-
-    /*snprintf(image_header, 16, "P6\n%d %d 255\n", PIXEL_WIDTH, PIXEL_HEIGHT);
-    write(file, image_header, 16);*/
-    ret = file_write_blocking(file, buffers[index].start, buffers[index].size);
-    if (0 > ret)
-    {
-        SYS_TRACE("ERR: WRITE");
-        return SYS_FAILURE;
-    }
-
-    close(file);
-
-    return SYS_SUCCESS;
-}
-
-
-static INT32 file_write_blocking(INT32 fd, const UINT08 *buf, size_t size)
-{
-    ssize_t wBytes = 0;
-    size_t sizeBuf = size;
-    do
-    {
-        wBytes += write(fd, &buf[wBytes], sizeBuf);
-
-        if(wBytes > 0)
-            sizeBuf -= (size_t)wBytes;
-
-    } while (wBytes < size);
-
-    return wBytes;
-}
-#endif

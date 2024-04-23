@@ -79,17 +79,21 @@
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="src\camera\camera.c" />
-    <ClCompile Include="src\frameBuffer\framebuffer.c" />
+    <ClCompile Include="middleware\frameBuffer\framebuffer.c" />
     <ClCompile Include="src\nvm\nvm.c" />
     <ClCompile Include="src\main.c" />
+    <ClCompile Include="middleware\image\image.c" />
+    <ClCompile Include="src\transcoder\transcoder.c" />
     <ClCompile Include="utils\osal\osal.c" />
     <ClCompile Include="utils\syslog\syslog.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="middleware\image\image.h" />
     <ClInclude Include="src\camera\camera.h" />
     <ClInclude Include="src\camera\camera_cfg.h" />
-    <ClInclude Include="src\frameBuffer\framebuffer.h" />
+    <ClInclude Include="middleware\frameBuffer\framebuffer.h" />
     <ClInclude Include="src\nvm\nvm.h" />
+    <ClInclude Include="src\transcoder\transcoder.h" />
     <ClInclude Include="utils\osal\osal.h" />
     <ClInclude Include="utils\osal\osal_cfg.h" />
     <ClInclude Include="utils\osal\osal_tasks_cfg.h" />
@@ -100,7 +104,7 @@
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\git\RTES\utils\osal;C:\git\RTES\utils\syslog;C:\git\RTES\utils\types;C:\git\RTES\utils\ringbuffer;C:\git\RTES\src\camera;C:\git\RTES\src\nvm;C:\git\RTES\src\frameBuffer</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\git\RTES\utils\osal;C:\git\RTES\utils\syslog;C:\git\RTES\utils\types;C:\git\RTES\utils\ringbuffer;C:\git\RTES\src\camera;C:\git\RTES\src\nvm;C:\git\RTES\middleware\frameBuffer;C:\git\RTES\middleware\image;C:\git\RTES\src\transcoder</AdditionalIncludeDirectories>
       <CLanguageStandard>gnu99</CLanguageStandard>
       <CppLanguageStandard>gnu++03</CppLanguageStandard>
       <PreprocessorDefinitions>BEAGLEBONE; DEBUG; </PreprocessorDefinitions>
