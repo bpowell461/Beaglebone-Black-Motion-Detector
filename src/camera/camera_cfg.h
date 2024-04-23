@@ -5,21 +5,21 @@
 #include "utils.h"
 
 #define CAMERA_USE_PPM
-#define SAVED_FRAMES_MAX    (5U)
+#define SAVED_FRAMES_MAX    5U
 
 #if defined(CAMERA_USE_YUV)
 #define PIXEL_FORMAT_CAMERA (V4L2_PIX_FMT_YUYV)
 #define PIXEL_FORMAT_FIELD  (V4L2_FIELD_NONE)
-#define PIXEL_WIDTH     (640)
-#define PIXEL_HEIGHT    (480)
+#define PIXEL_WIDTH     640
+#define PIXEL_HEIGHT    480
 #define IMAGE_EXT       ".yuv"
 
 #elif defined(CAMERA_USE_PPM)
 
 #define PIXEL_FORMAT_CAMERA (V4L2_PIX_FMT_YUYV)
 #define PIXEL_FORMAT_FIELD  (V4L2_FIELD_NONE)
-#define PIXEL_WIDTH     (320)
-#define PIXEL_HEIGHT    (240)
+#define PIXEL_WIDTH     320
+#define PIXEL_HEIGHT    240
 #define FRAME_SIZE      (PIXEL_WIDTH * PIXEL_HEIGHT * 2)
 #define IMAGE_EXT       ".ppm"
 
@@ -27,8 +27,8 @@
 
 #define PIXEL_FORMAT_CAMERA v4l2_fourcc('M', 'J', 'P', 'G')
 #define PIXEL_FORMAT_FIELD  (V4L2_FIELD_INTERLACED)
-#define PIXEL_WIDTH     (640)
-#define PIXEL_HEIGHT    (480)
+#define PIXEL_WIDTH     640
+#define PIXEL_HEIGHT    480
 #define IMAGE_EXT       ".jpg"
 
 #else
@@ -38,7 +38,7 @@
 #endif
 
 #define IMAGE_FILE(x) (x IMAGE_EXT)
-#define IMAGE_HEADER ("P6\nRESERVED\n"STR(PIXEL_WIDTH)" "STR(PIXEL_HEIGHT)"\n255\n")
+#define IMAGE_HEADER ("P6\n# RESERVED\n"STR(PIXEL_WIDTH)" "STR(PIXEL_HEIGHT)"\n255\n")
 #define RGB_FRAME_SIZE_BYTES (PIXEL_WIDTH * PIXEL_HEIGHT * 3)
 
 /* Custom Image Formats */
