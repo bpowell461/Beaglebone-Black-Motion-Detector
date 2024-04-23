@@ -178,9 +178,9 @@ static void yuv2rgb(INT32 y, INT32 u, INT32 v, UINT08 *r, UINT08 *g, UINT08 *b)
     CLAMP_UPPER(b1, 255);
     CLAMP_LOWER(b1, 0);
 
-    *r = r1;
-    *g = g1;
-    *b = b1;
+    *r = (UINT08) r1 & 0xFFu;
+    *g = (UINT08) g1 & 0xFFu;
+    *b = (UINT08) b1 & 0xFFu;
 }
 
 sys_result_e image_save(const UINT08 *buf, const UINT32 size)
@@ -222,7 +222,6 @@ static INT32 file_write_blocking(INT32 fd, const UINT08 *buf, size_t size)
 
     size_t sizeBuf = size;
 
-    UINT32 i = 0;
     char header[] = IMAGE_HEADER;
 
     // subtract 1 because sizeof for string includes null terminator

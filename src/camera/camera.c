@@ -114,7 +114,7 @@ void *camera_task(void *threadp)
 
     osal_task_wait_start(id);
 
-    framebuffer_writeframe(camera_fd);
+    framebuffer_initframebuffers(camera_fd);
 
     camera_capturestate(eCAMERA_ON);
 

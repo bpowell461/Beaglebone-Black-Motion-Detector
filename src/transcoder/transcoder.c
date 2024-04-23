@@ -6,11 +6,6 @@
 #include "transcoder.h"
 #include "syslog.h"
 
-ringbuffer_typedef(frame_t, rawImageBuffer_t);
-
-static rawImageBuffer_t incomingBuffer;
-
-static void read_frames(void);
 static void process_frames(void);
 
 static INT32 camera_fd;
@@ -18,7 +13,6 @@ static INT32 camera_fd;
 
 void transcoder_init(INT32 *fd)
 {
-    ringbuffer_init(incomingBuffer, frame_t, 8);
     imagebuffer_init();
 
     camera_fd = *fd;
@@ -40,7 +34,6 @@ void *transcoder_task(void *threadp)
         {
             break;
         }
-        read_frames();
 
         process_frames();
 
@@ -54,30 +47,17 @@ void *transcoder_task(void *threadp)
     return NULL;
 }
 
-static void read_frames(void)
-{
-    /* Two memcpy operations are happening here, this is a quick and dirty solution but it needs to be optimized */
-    frame_t framePtr;
-    if (SYS_SUCCESS == framebuffer_getframe(camera_fd, framePtr.bytes))
-    {
-        if (!ringbuffer_isFull(&incomingBuffer))
-        {
-            ringbuffer_write(&incomingBuffer, framePtr);
-        }
-    }
-}
 static void process_frames(void)
 {
     rgb_frame_t rgbFrame;
-    frame_t     *rawFrame;
-    if (!ringbuffer_isEmpty(&incomingBuffer))
-    {
-        ringbuffer_read_zc(&incomingBuffer, rawFrame);
+    frame_t     *rawFrame = NULL;
 
+    if ( SYS_SUCCESS == framebuffer_getframe_ptr(camera_fd, &rawFrame))
+    {
         image_convert(V4L2_PIX_FMT_YUYV, V4L2_PIX_FMT_RGB888, rawFrame->bytes, rgbFrame.bytes);
 
         imagebuffer_write(&rgbFrame);
 
-        ringbuffer_inc_readptr(&incomingBuffer);
+        framebuffer_freeframe(camera_fd, rawFrame);
     }
 }
