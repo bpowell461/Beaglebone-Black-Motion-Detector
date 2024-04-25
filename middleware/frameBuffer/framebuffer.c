@@ -19,7 +19,7 @@ ringbuffer_typedef(frame_t, rawImageBuffer_t);
 
 static rawImageBuffer_t incomingBuffer;
 
-#define NUM_FRAME_BUFS 8
+#define NUM_FRAME_BUFS 4
 
 struct buffer {
     UINT08 *start;
@@ -32,18 +32,15 @@ static INT32 framebuffer_fd;
 
 static struct timeval select_timeout;
 
-static osal_mutex_t mtx;
-
 static sys_result_e framebuffer_ioctl(INT32 fd, UINT32 request, void *arg);
 static UINT32       framebuffer_requestbuffers(UINT08 count);
 static UINT32       framebuffer_mapbuffers(UINT08 idx, UINT08 **bufferPtr);
-static UINT32       framebuffer_queueframe(struct v4l2_buffer *buf);
+static sys_result_e       framebuffer_queueframe(struct v4l2_buffer *buf);
 static sys_result_e framebuffer_dequeueframe(struct v4l2_buffer *buf);
 
 sys_result_e framebuffer_init(INT32 *fd)
 {
     UINT32 bufCount = 0;
-    osal_mutex_init(&mtx, OSAL_MTX_PRIO_INHERIT);
 
     framebuffer_fd = *fd;
 
@@ -54,10 +51,12 @@ sys_result_e framebuffer_init(INT32 *fd)
         buffers[i].size = framebuffer_mapbuffers(i, &buffers[i].start);
     }
 
-    ringbuffer_init(incomingBuffer, frame_t, NUM_FRAME_BUFS);
+    ringbuffer_init(incomingBuffer, frame_t, (NUM_FRAME_BUFS*2));
 
     select_timeout.tv_sec = 0;
     select_timeout.tv_usec = (900 * USEC_PER_MSEC);
+
+    framebuffer_initframebuffers(framebuffer_fd);
 
     return SYS_SUCCESS;
 }
@@ -69,12 +68,7 @@ sys_result_e framebuffer_getframe(INT32 fd, frame_t *frame)
         return SYS_IGNORE;
     }
 
-    osal_mutex_lock(&mtx);
-
     ringbuffer_read(&incomingBuffer, *frame);
-
-    osal_mutex_unlock(&mtx);
-
 
     return SYS_SUCCESS;
 }
@@ -86,13 +80,8 @@ sys_result_e framebuffer_getframe_ptr(INT32 fd, frame_t **frame)
         return SYS_IGNORE;
     }
 
-    osal_mutex_lock(&mtx);
-
     ringbuffer_read_zc(&incomingBuffer, *frame);
 
-    osal_mutex_unlock(&mtx);
-
-    
     return SYS_SUCCESS;
 }
 
@@ -103,12 +92,7 @@ sys_result_e framebuffer_freeframe(INT32 fd, frame_t *frame)
         return SYS_FAILURE;
     }
 
-    osal_mutex_lock(&mtx);
-
     ringbuffer_inc_readptr(&incomingBuffer);
-
-    osal_mutex_unlock(&mtx);
-
 
     return SYS_SUCCESS;
 }
@@ -129,7 +113,7 @@ sys_result_e framebuffer_initframebuffers(INT32 fd)
     return SYS_SUCCESS;
 }
 
-sys_result_e framebuffer_writeframe(INT32 fd)
+sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
 {
     fd_set fds;
     sys_result_e ret;
@@ -148,11 +132,9 @@ sys_result_e framebuffer_writeframe(INT32 fd)
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
 
-    osal_mutex_lock(&mtx);
-
     ret = framebuffer_dequeueframe(&buf);
 
-    if (SYS_SUCCESS == ret)
+    if (SYS_SUCCESS == ret && saveFrame)
     {
         if (!ringbuffer_isFull(&incomingBuffer))
         {
@@ -161,9 +143,7 @@ sys_result_e framebuffer_writeframe(INT32 fd)
         }
     }
 
-    framebuffer_queueframe(&buf);
-    
-    osal_mutex_unlock(&mtx);
+    ret = framebuffer_queueframe(&buf);
 
     return ret;
 }
@@ -229,7 +209,7 @@ static UINT32 framebuffer_mapbuffers(UINT08 idx, UINT08 **bufferPtr)
     return buf.length;
 }
 
-static UINT32 framebuffer_queueframe(struct v4l2_buffer *bufd)
+static sys_result_e framebuffer_queueframe(struct v4l2_buffer *bufd)
 {
     if (SYS_SUCCESS != framebuffer_ioctl(framebuffer_fd, VIDIOC_QBUF, bufd))
     {
@@ -237,7 +217,7 @@ static UINT32 framebuffer_queueframe(struct v4l2_buffer *bufd)
         return SYS_FAILURE;
     }
 
-    return bufd->bytesused;
+    return SYS_SUCCESS;
 }
 
 static sys_result_e framebuffer_dequeueframe(struct v4l2_buffer *buf)

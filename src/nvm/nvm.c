@@ -38,7 +38,6 @@ void *nvm_task(void *threadp)
 
     while(DEF_TRUE)
     {
-        SYS_TRACE("Getting frame(s)");
 
         if (SYS_SUCCESS == imagebuffer_startread(&save_frame))
         {
@@ -58,10 +57,6 @@ void *nvm_task(void *threadp)
                 exit_task = DEF_TRUE;
                 break;
             }
-        }
-        else
-        {
-            SYS_TRACE("No frames found. Sleeping...");
         }
 
         if (exit_task)

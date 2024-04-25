@@ -36,7 +36,7 @@ sys_result_e imagebuffer_init(void)
     osal_mutex_init(&buf_mtx_handle.write_mtx, OSAL_MTX_PRIO_INHERIT);
     osal_mutex_init(&buf_mtx_handle.read_mtx,  OSAL_MTX_PRIO_INHERIT);
 
-    ringbuffer_init(imageBuffer, rgb_frame_t, 8);
+    ringbuffer_init(imageBuffer, rgb_frame_t, 16);
 
     return SYS_SUCCESS;
 }

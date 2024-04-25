@@ -17,6 +17,7 @@
 
 /** Macros **/
 #define MAX_WRITE_ERRORS (5u)
+#define MAX_IGNORE_FRAMES (8u)
 
 /** Type Definitions **/
 typedef enum
@@ -35,8 +36,8 @@ typedef enum
 
 /** Static Variables **/
 static INT32 camera_fd;
-static UINT08 write_errors = 0;
 static UINT08 num_writes = 0;
+static UINT08 ignoreFrames = 0;
 
 static char *dev_name = "/dev/video0";
 
@@ -114,32 +115,28 @@ void *camera_task(void *threadp)
 
     osal_task_wait_start(id);
 
-    framebuffer_initframebuffers(camera_fd);
-
     camera_capturestate(eCAMERA_ON);
 
     while(DEF_TRUE)
     {
+        BOOL_T saveFrame = ignoreFrames >= MAX_IGNORE_FRAMES;
         if (SAVED_FRAMES_MAX <= num_writes)
         {
             break;
         }
 
-        if (SYS_SUCCESS != framebuffer_writeframe(camera_fd))
+        if (SYS_SUCCESS == framebuffer_writeframe(camera_fd, saveFrame))
         {
-            write_errors++;
-        }
-        else
-        {
-            SYS_TRACE("Writing frame");
-            num_writes++;
-            write_errors = 0;
-        }
-
-        if (MAX_WRITE_ERRORS <= write_errors)
-        {
-            SYS_TRACE("Maximum consecutive write errors reached.\n");
-            break;
+            if (saveFrame)
+            {
+                SYS_TRACE("Writing frame");
+                num_writes++;
+            }                
+            else
+            {
+                SYS_TRACE("Ignore frame");
+                ignoreFrames++;
+            }   
         }
 
         osal_task_delay(id);
