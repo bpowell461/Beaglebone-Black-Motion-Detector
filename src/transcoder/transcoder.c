@@ -9,7 +9,7 @@
 static void process_frames(void);
 
 static INT32 camera_fd;
-
+static BOOL_T exit_task = DEF_FALSE;
 
 void transcoder_init(INT32 *fd)
 {
@@ -30,14 +30,26 @@ void *transcoder_task(void *threadp)
 
     while (DEF_TRUE)
     {
-        if (image_getsavedframes() >= SAVED_FRAMES_MAX)
+        for (UINT08 i = 0; i < 2; i++)
         {
-            break;
+            process_frames();
+
+            if (image_getsavedframes() >= SAVED_FRAMES_MAX)
+            {
+                exit_task = DEF_TRUE;
+                break;
+            }
         }
 
-        process_frames();
-
-        osal_task_delay(id);
+        if (exit_task)
+        {
+            SYS_TRACE("Maximum frames saved reached");
+            break;
+        }
+        else
+        {
+            osal_task_delay(id);
+        }
     }
 
     SYS_TRACE("Transcoder Task Exiting...");
