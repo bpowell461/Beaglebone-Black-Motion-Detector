@@ -107,14 +107,16 @@ void camera_init(INT32 *fd)
     if (SYS_SUCCESS != camera_ioctl(camera_fd, VIDIOC_G_PARM, &streamparm))
     {
         SYS_TRACE("ERR: Getting VIDIOC parameters");
+        exit(EXIT_FAILURE);
     }
 
     streamparm.parm.capture.capturemode |= V4L2_CAP_TIMEPERFRAME;
     streamparm.parm.capture.timeperframe.numerator = 1;
-    streamparm.parm.capture.timeperframe.denominator = 15;
+    streamparm.parm.capture.timeperframe.denominator = 30;
     if (SYS_SUCCESS != camera_ioctl(camera_fd, VIDIOC_S_PARM, &streamparm))
     {
         SYS_TRACE("ERR: Setting VIDIOC parameters");
+        exit(EXIT_FAILURE);
     }
 
     *fd = camera_fd;
