@@ -20,6 +20,7 @@ ringbuffer_typedef(frame_t, rawImageBuffer_t);
 static rawImageBuffer_t incomingBuffer;
 
 #define NUM_FRAME_BUFS 4
+#define OVERSAMPLE_FRAME 2 
 
 struct buffer {
     UINT08 *start;
@@ -51,7 +52,7 @@ sys_result_e framebuffer_init(INT32 *fd)
         buffers[i].size = framebuffer_mapbuffers(i, &buffers[i].start);
     }
 
-    ringbuffer_init(incomingBuffer, frame_t, (NUM_FRAME_BUFS*2));
+    ringbuffer_init(incomingBuffer, frame_t, 16);
 
     select_timeout.tv_sec = 0;
     select_timeout.tv_usec = (900 * USEC_PER_MSEC);
@@ -119,31 +120,35 @@ sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
     sys_result_e ret;
     struct v4l2_buffer buf = { 0 };
 
-    /* Apparently select MAY modify the timeval struct */
-    struct timeval temp = select_timeout;
-
-    FD_ZERO(&fds);
-    FD_SET(fd, &fds);
-    int r = select(fd + 1, &fds, NULL, NULL, &temp);
-    if (-1 == r) {
-        return SYS_IGNORE;
-    }
-
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
 
-    ret = framebuffer_dequeueframe(&buf);
-
-    if (SYS_SUCCESS == ret && saveFrame)
+    for (UINT08 i = 0; i < NUM_FRAME_BUFS; i++)
     {
-        if (!ringbuffer_isFull(&incomingBuffer))
-        {
-            memcpy(incomingBuffer.data[incomingBuffer.writePtr].bytes, buffers[buf.index].start, buffers[buf.index].size);
-            ringbuffer_inc_writeptr(&incomingBuffer);
+        FD_ZERO(&fds);
+        FD_SET(fd, &fds);
+        int r = select(fd + 1, &fds, NULL, NULL, 0);
+        if (-1 == r) {
+            return SYS_IGNORE;
         }
-    }
 
-    ret = framebuffer_queueframe(&buf);
+        ret = framebuffer_dequeueframe(&buf);
+        if (SYS_SUCCESS != ret)
+        {
+            continue;
+        }
+
+        if (SYS_SUCCESS == ret && saveFrame && (i == OVERSAMPLE_FRAME))
+        {
+            if (!ringbuffer_isFull(&incomingBuffer))
+            {
+                memcpy(incomingBuffer.data[incomingBuffer.writePtr].bytes, buffers[buf.index].start, buffers[buf.index].size);
+                ringbuffer_inc_writeptr(&incomingBuffer);
+            }
+        }
+
+        ret = framebuffer_queueframe(&buf);
+    }
 
     return ret;
 }

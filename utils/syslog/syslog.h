@@ -10,7 +10,6 @@
 #define SYS_LOG_H_
 
 #include "types.h"
-#define LOG_AND_PRINT
 
 #if defined(DEBUG)
     #if defined(LOG_AND_PRINT)

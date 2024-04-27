@@ -36,7 +36,7 @@ sys_result_e imagebuffer_init(void)
     osal_mutex_init(&buf_mtx_handle.write_mtx, OSAL_MTX_PRIO_INHERIT);
     osal_mutex_init(&buf_mtx_handle.read_mtx,  OSAL_MTX_PRIO_INHERIT);
 
-    ringbuffer_init(imageBuffer, rgb_frame_t, 16);
+    ringbuffer_init(imageBuffer, rgb_frame_t, 32);
 
     return SYS_SUCCESS;
 }
@@ -188,7 +188,7 @@ sys_result_e image_save(const UINT08 *buf, const UINT32 size)
     char out_name[256];
     INT32 ret;
 
-    sprintf(out_name, IMAGE_FILE("frame%03d"), frameIdx);
+    sprintf(out_name, IMAGE_FILE("/media/card/pics/frame%03d"), frameIdx);
     INT32 file = open(out_name, O_RDWR | O_CREAT | O_TRUNC | O_NONBLOCK, 0666);
     if (0 > file)
     {

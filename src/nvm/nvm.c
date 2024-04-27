@@ -38,24 +38,26 @@ void *nvm_task(void *threadp)
 
     while(DEF_TRUE)
     {
-
-        if (SYS_SUCCESS == imagebuffer_startread(&save_frame))
+        for (UINT08 i = 0; i < 3; i ++)
         {
-            SYS_TRACE("Found frame");
-            if (SYS_SUCCESS != image_save(save_frame->bytes, RGB_FRAME_SIZE_BYTES))
+            if (SYS_SUCCESS == imagebuffer_startread(&save_frame))
             {
-                SYS_TRACE("ERR: SAVING FILE");
-            }
-            else
-            {
-                imagebuffer_endread();
-            }
-            
+                SYS_TRACE("Found frame");
+                if (SYS_SUCCESS != image_save(save_frame->bytes, RGB_FRAME_SIZE_BYTES))
+                {
+                    SYS_TRACE("ERR: SAVING FILE");
+                }
+                else
+                {
+                    imagebuffer_endread();
+                }
 
-            if (image_getsavedframes() >= SAVED_FRAMES_MAX)
-            {
-                exit_task = DEF_TRUE;
-                break;
+
+                if (image_getsavedframes() >= SAVED_FRAMES_MAX)
+                {
+                    exit_task = DEF_TRUE;
+                    break;
+                }
             }
         }
 
