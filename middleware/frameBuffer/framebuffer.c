@@ -120,7 +120,7 @@ sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
     buf.memory = V4L2_MEMORY_MMAP;
 
     BOOL_T writeCondition = saveFrame && (frame_cnt % OVERSAMPLE_FRAME == 0);
-
+    
     FD_ZERO(&fds);
     FD_SET(fd, &fds);
     int r = select(fd + 1, &fds, NULL, NULL, 0);
@@ -147,13 +147,13 @@ sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
         }
     }
 
-    if(saveFrame)
-        frame_cnt++;
-
     if (SYS_SUCCESS != framebuffer_queueframe(&buf))
     {
         return SYS_FAILURE;
     }
+
+    if(saveFrame)
+        frame_cnt++;
 
     if (writeCondition)
     {

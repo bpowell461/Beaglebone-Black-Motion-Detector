@@ -37,9 +37,6 @@ sys_result_e imagebuffer_init(void)
     if (imagebuffer_initialized)
         return SYS_SUCCESS;
 
-    osal_mutex_init(&buf_mtx_handle.write_mtx, OSAL_MTX_PRIO_INHERIT);
-    osal_mutex_init(&buf_mtx_handle.read_mtx,  OSAL_MTX_PRIO_INHERIT);
-
     ringbuffer_init(imageBuffer, rgb_frame_t, 32);
 
     return SYS_SUCCESS;
@@ -47,7 +44,6 @@ sys_result_e imagebuffer_init(void)
 sys_result_e imagebuffer_startread(rgb_frame_t **frame)
 {
     sys_result_e ret;
-    osal_mutex_lock(&buf_mtx_handle.read_mtx);
 
     if (!ringbuffer_isEmpty(&imageBuffer))
     {
@@ -59,14 +55,11 @@ sys_result_e imagebuffer_startread(rgb_frame_t **frame)
         ret = SYS_IGNORE;
     }
 
-    osal_mutex_unlock(&buf_mtx_handle.read_mtx);
-
     return ret;
 }
 sys_result_e imagebuffer_endread(void)
 {
     sys_result_e ret;
-    osal_mutex_lock(&buf_mtx_handle.read_mtx);
 
     if (!ringbuffer_isEmpty(&imageBuffer))
     {
@@ -78,15 +71,12 @@ sys_result_e imagebuffer_endread(void)
         ret = SYS_IGNORE;
     }
 
-    osal_mutex_unlock(&buf_mtx_handle.read_mtx);
-
     return ret;
 }
 
 sys_result_e imagebuffer_write(rgb_frame_t *frame)
 {
     sys_result_e ret;
-    osal_mutex_lock(&buf_mtx_handle.write_mtx);
     if (!ringbuffer_isFull(&imageBuffer))
     {
         ringbuffer_write(&imageBuffer, *frame);
@@ -96,8 +86,6 @@ sys_result_e imagebuffer_write(rgb_frame_t *frame)
     {
         ret = SYS_FAILURE;
     }
-
-    osal_mutex_unlock(&buf_mtx_handle.write_mtx);
 
     return ret;
 }

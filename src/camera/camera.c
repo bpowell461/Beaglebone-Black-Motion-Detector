@@ -143,6 +143,7 @@ void *camera_task(void *threadp)
             }
             case eSTATE_CAPTURING:
             {
+                osal_stop_scheduler();
                 if (SYS_SUCCESS == framebuffer_writeframe(camera_fd, DEF_TRUE))
                 {
                     SYS_TRACE("Writing frame: %u", num_writes);
@@ -152,6 +153,7 @@ void *camera_task(void *threadp)
                 {
                     state = eSTATE_EXIT;
                 }
+                osal_start_scheduler();
                 break;
             }
             case eSTATE_EXIT:
