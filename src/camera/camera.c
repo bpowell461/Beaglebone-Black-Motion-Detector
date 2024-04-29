@@ -16,8 +16,6 @@
 #include "camera_cfg.h"
 
 /** Macros **/
-#define MAX_WRITE_ERRORS (5u)
-#define MAX_IGNORE_FRAMES (10u)
 
 /** Type Definitions **/
 typedef enum

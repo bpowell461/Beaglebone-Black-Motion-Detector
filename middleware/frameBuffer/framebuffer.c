@@ -123,11 +123,9 @@ sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
 {
     fd_set fds;
     struct v4l2_buffer buf = { 0 };
-    static UINT32 v4l2_writeIdx = 0;
 
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
-    buf.index = v4l2_writeIdx;
 
     BOOL_T writeCondition = saveFrame && (frame_cnt % OVERSAMPLE_FRAME == 0);
 
@@ -164,8 +162,6 @@ sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
     {
         return SYS_FAILURE;
     }
-
-    v4l2_writeIdx = (v4l2_writeIdx + 1u) & (NUM_FRAME_BUFS - 1u);
 
     if (writeCondition)
     {

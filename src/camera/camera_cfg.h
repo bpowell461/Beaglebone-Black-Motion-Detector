@@ -5,8 +5,10 @@
 #include "utils.h"
 
 #define CAMERA_USE_PPM
-#define SAVED_FRAMES_MAX    10
+#define SAVED_FRAMES_MAX    16
 #define CAMERA_ACQUISITION_10HZ
+
+#define MAX_IGNORE_FRAMES (100u)
 
 #if defined(CAMERA_USE_YUV)
 #define PIXEL_FORMAT_CAMERA (V4L2_PIX_FMT_YUYV)
