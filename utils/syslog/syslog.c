@@ -41,7 +41,7 @@ static BOOL_T       isInitialized = DEF_FALSE;
 static printFunc_t  _printFunc;
 static vprintFunc_t _vprintFunc;
 static int          trace_fd;
-
+static char         sys_name[256];
 
 /* Function Implementations */
 
@@ -59,6 +59,24 @@ sys_result_e syslog_init(char* assignment, const int courseNum, const int assign
         trace_fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK);
         if (trace_fd < 0)
             return SYS_FAILURE;
+
+        /* Currently this is very Linux Specific */
+        FILE *fp;
+        char path[1035];
+
+        /* Open the command for reading. */
+        fp = popen("uname -a", "r");
+        if (fp == NULL) {
+            return SYS_FAILURE;
+        }
+
+        /* Read the output a line at a time - output it. */
+        if (fgets(path, sizeof(path), fp) != NULL) {
+            strncpy(sys_name, path, 256);
+        }
+
+        /* close */
+        pclose(fp);
 
 
         /* Hook for OS or HAL specific trace function */
@@ -98,23 +116,7 @@ void syslog_printheader(void)
 {
     if (isInitialized)
     {
-        /* Currently this is very Linux Specific */
-        FILE* fp;
-        char path[1035];
-
-        /* Open the command for reading. */
-        fp = popen("uname -a", "r");
-        if (fp == NULL) {
-            return;
-        }
-
-        /* Read the output a line at a time - output it. */
-        while(fgets(path, sizeof(path), fp) != NULL) {
-            SYS_TRACE(path);
-        }
-
-        /* close */
-        pclose(fp);
+        SYS_TRACE(sys_name);
     }
 
 }
@@ -164,6 +166,11 @@ void syslog_trace(const char *msg, ...)
 
     }
     
+}
+
+const char *syslog_getsysname(void)
+{
+    return sys_name;
 }
 
 void syslog_print(const char *msg, ...)

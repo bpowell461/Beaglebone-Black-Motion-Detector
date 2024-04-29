@@ -10,6 +10,9 @@
 #define SYS_LOG_H_
 
 #include "types.h"
+#include <time.h>
+
+#define SYSLOG_MEASURING_ENABLED
 
 #if defined(DEBUG)
     #if defined(LOG_AND_PRINT)
@@ -17,8 +20,23 @@
     #else
         #define SYS_TRACE(...)  syslog_trace(__VA_ARGS__)
     #endif
+
+    #if defined(SYSLOG_MEASURING_ENABLED)
+        #define SYSLOG_INITMEASURE() struct timespec measure[2]
+        #define SYSLOG_MEASURE(x, y) \
+            clock_gettime(CLOCK_MONOTONIC, &measure[0]); \
+            ((x)); \
+            clock_gettime(CLOCK_MONOTONIC, &measure[1]); \
+            SYS_TRACE("EXECUTION TIME (%s): %ld usec", (y), (measure[1].tv_nsec - measure[0].tv_nsec) / (1000))
+    #else
+        #define SYSLOG_INITMEASURE() {}
+        #define SYSLOG_MEASURE(x, y) x
+    #endif
+
 #else
 #define SYS_TRACE(...) {}
+#define SYSLOG_INITMEASURE() {}
+#define SYSLOG_MEASURE(x, y) x
 #endif
 
 /** 
@@ -60,6 +78,11 @@ void syslog_trace(const char* msg, ...);
 */
 void syslog_print(const char *msg, ...);
 
+/**
+* Gets the system name.
+* @return Character string
+*/
+const char *syslog_getsysname(void);
 
 
 #endif //SYS_LOG_H_

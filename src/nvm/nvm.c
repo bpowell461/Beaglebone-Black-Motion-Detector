@@ -43,7 +43,7 @@ void *nvm_task(void *threadp)
             if (SYS_SUCCESS == imagebuffer_startread(&save_frame))
             {
                 SYS_TRACE("Found frame");
-                if (SYS_SUCCESS != image_save(save_frame->bytes, RGB_FRAME_SIZE_BYTES))
+                if (SYS_SUCCESS != image_save(save_frame, RGB_FRAME_SIZE_BYTES))
                 {
                     SYS_TRACE("ERR: SAVING FILE");
                 }

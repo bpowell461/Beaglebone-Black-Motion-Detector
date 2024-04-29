@@ -18,7 +18,7 @@
 
 #define MAX_TASKS 4
 
-#define TIMER_TICK_MS (100U)
+#define TIMER_TICK_MS (10U)
 
 typedef struct
 {
@@ -100,7 +100,7 @@ sys_result_e osal_init(void)
         osal_task_sequencers[i].task_state = TASKSTATE_UNUSED;
     }
 
-    rc = timer_create(CLOCK_REALTIME, NULL, &osal_task_timer);
+    rc = timer_create(CLOCK_MONOTONIC, NULL, &osal_task_timer);
     if (IS_ERROR(rc))
     {
         return SYS_FAILURE;

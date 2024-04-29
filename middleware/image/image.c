@@ -10,6 +10,8 @@
 #include "utils.h"
 #include "syslog.h"
 
+SYSLOG_INITMEASURE();
+
 ringbuffer_typedef(rgb_frame_t, rgbImageBuffer_t);
 
 typedef struct
@@ -24,9 +26,11 @@ static UINT08 frameIdx = 0;
 
 static BOOL_T imagebuffer_initialized = DEF_FALSE;
 
+static struct timespec start_time;
+
 static void yuv2rgb(INT32 y, INT32 u, INT32 v, UINT08 *r, UINT08 *g, UINT08 *b);
 static sys_result_e rgb888_convert(UINT32 srcFmt, const UINT08 *src_frame, UINT08 *dest_frame);
-static INT32 file_write_blocking(INT32 fd, const UINT08 *buf, size_t size);
+static INT32 file_write_blocking(INT32 fd, const rgb_frame_t *buf, size_t size);
 
 sys_result_e imagebuffer_init(void)
 {
@@ -109,7 +113,7 @@ sys_result_e image_convert(UINT32 srcFmt, UINT32 destFmt, const UINT08 *src_fram
     {
         case V4L2_PIX_FMT_RGB888:
         {
-            rgb888_convert(srcFmt, src_frame, dest_frame);
+            SYSLOG_MEASURE(rgb888_convert(srcFmt, src_frame, dest_frame), "rgb888_convert");
         }
         default:
         {
@@ -183,7 +187,7 @@ static void yuv2rgb(INT32 y, INT32 u, INT32 v, UINT08 *r, UINT08 *g, UINT08 *b)
     *b = (UINT08) b1 & 0xFFu;
 }
 
-sys_result_e image_save(const UINT08 *buf, const UINT32 size)
+sys_result_e image_save(const rgb_frame_t *buf, const UINT32 size)
 {
     char out_name[256];
     INT32 ret;
@@ -196,7 +200,7 @@ sys_result_e image_save(const UINT08 *buf, const UINT32 size)
         return SYS_FAILURE;
     }
 
-    ret = file_write_blocking(file, buf, size);
+    SYSLOG_MEASURE(ret = file_write_blocking(file, buf, size), "file_write_blocking");
     if (0 > ret)
     {
         SYS_TRACE("ERR: WRITE");
@@ -215,21 +219,27 @@ UINT08 image_getsavedframes(void)
     return frameIdx;
 }
 
-static INT32 file_write_blocking(INT32 fd, const UINT08 *buf, size_t size)
+static INT32 file_write_blocking(INT32 fd, const rgb_frame_t *buf, size_t size)
 {
     /* Bytes written to file */
     ssize_t wBytes = 0;
 
     size_t sizeBuf = size;
 
-    char header[] = IMAGE_HEADER;
+    char header[256];
 
-    // subtract 1 because sizeof for string includes null terminator
-    write(fd, header, sizeof(header) - 1);
+    if (!frameIdx)
+    {
+        start_time = buf->timestamp;
+    }
+
+    sprintf(header, IMAGE_HEADER, syslog_getsysname(), ((buf->timestamp.tv_nsec - start_time.tv_nsec) / (long)(USEC_PER_MSEC * NSEC_PER_USEC)));
+
+    write(fd, header, strlen(header));
 
     do
     {
-        wBytes += write(fd, &buf[wBytes], sizeBuf);
+        wBytes += write(fd, &buf->bytes[wBytes], sizeBuf);
 
         if (wBytes > 0)
             sizeBuf -= (size_t)wBytes;

@@ -38,7 +38,7 @@
 #endif
 
 #define IMAGE_FILE(x) (x IMAGE_EXT)
-#define IMAGE_HEADER ("P6\n# RESERVED\n"STR(PIXEL_WIDTH)" "STR(PIXEL_HEIGHT)"\n255\n")
+#define IMAGE_HEADER ("P6\n# %s\n# Time (ms): %ld \n"STR(PIXEL_WIDTH)" "STR(PIXEL_HEIGHT)"\n255\n")
 #define RGB_FRAME_SIZE_BYTES (PIXEL_WIDTH * PIXEL_HEIGHT * 3)
 
 /* Custom Image Formats */
@@ -47,12 +47,14 @@
 /* This is the "raw" frame size */
 typedef struct
 {
+    struct timespec timestamp;
     UINT08 bytes[FRAME_SIZE];
 }frame_t;
 
 /* Modified frame size using RGB888 */
 typedef struct
 {
+    struct timespec timestamp;
     UINT08 bytes[RGB_FRAME_SIZE_BYTES];
 }rgb_frame_t;
 

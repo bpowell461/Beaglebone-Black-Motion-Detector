@@ -15,12 +15,14 @@
 #include "osal.h"
 #include "camera_cfg.h"
 
+SYSLOG_INITMEASURE();
+
 ringbuffer_typedef(frame_t, rawImageBuffer_t);
 
 static rawImageBuffer_t incomingBuffer;
 
-#define NUM_FRAME_BUFS 4
-#define OVERSAMPLE_FRAME 2 
+#define NUM_FRAME_BUFS 16
+#define OVERSAMPLE_FRAME 2
 
 struct buffer {
     UINT08 *start;
@@ -30,8 +32,7 @@ struct buffer {
 static struct buffer buffers[NUM_FRAME_BUFS];
 
 static INT32 framebuffer_fd;
-
-static struct timeval select_timeout;
+static UINT32 frame_cnt = 0;
 
 static sys_result_e framebuffer_ioctl(INT32 fd, UINT32 request, void *arg);
 static UINT32       framebuffer_requestbuffers(UINT08 count);
@@ -52,10 +53,7 @@ sys_result_e framebuffer_init(INT32 *fd)
         buffers[i].size = framebuffer_mapbuffers(i, &buffers[i].start);
     }
 
-    ringbuffer_init(incomingBuffer, frame_t, 16);
-
-    select_timeout.tv_sec = 0;
-    select_timeout.tv_usec = (900 * USEC_PER_MSEC);
+    ringbuffer_init(incomingBuffer, frame_t, 32);
 
     framebuffer_initframebuffers(framebuffer_fd);
 
@@ -123,32 +121,36 @@ sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
 
-    for (UINT08 i = 0; i < NUM_FRAME_BUFS; i++)
-    {
-        FD_ZERO(&fds);
-        FD_SET(fd, &fds);
-        int r = select(fd + 1, &fds, NULL, NULL, 0);
-        if (-1 == r) {
-            return SYS_IGNORE;
-        }
-
-        ret = framebuffer_dequeueframe(&buf);
-        if (SYS_SUCCESS != ret)
-        {
-            continue;
-        }
-
-        if (SYS_SUCCESS == ret && saveFrame && (i == OVERSAMPLE_FRAME))
-        {
-            if (!ringbuffer_isFull(&incomingBuffer))
-            {
-                memcpy(incomingBuffer.data[incomingBuffer.writePtr].bytes, buffers[buf.index].start, buffers[buf.index].size);
-                ringbuffer_inc_writeptr(&incomingBuffer);
-            }
-        }
-
-        ret = framebuffer_queueframe(&buf);
+    FD_ZERO(&fds);
+    FD_SET(fd, &fds);
+    int r = select(fd + 1, &fds, NULL, NULL, 0);
+    if (-1 == r) {
+        return SYS_IGNORE;
     }
+
+    ret = framebuffer_dequeueframe(&buf);
+    if (SYS_SUCCESS != ret)
+    {
+        return SYS_FAILURE;
+    }
+
+    if (SYS_SUCCESS == ret && saveFrame && (frame_cnt % OVERSAMPLE_FRAME == 0))
+    {
+        if (!ringbuffer_isFull(&incomingBuffer))
+        {
+            clock_gettime(CLOCK_MONOTONIC, &incomingBuffer.data[incomingBuffer.writePtr].timestamp);
+            SYSLOG_MEASURE(memcpy(incomingBuffer.data[incomingBuffer.writePtr].bytes, buffers[buf.index].start, buffers[buf.index].size), "memcopy");
+            ringbuffer_inc_writeptr(&incomingBuffer);
+        }
+        else
+        {
+            SYS_TRACE("ERR: Framebuffer full");
+        }
+    }
+
+    frame_cnt++;
+
+    ret = framebuffer_queueframe(&buf);
 
     return ret;
 }
