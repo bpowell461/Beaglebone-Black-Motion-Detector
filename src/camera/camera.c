@@ -29,6 +29,14 @@ typedef enum
 
 typedef enum
 {
+    eSTATE_ADJUSTING,
+    eSTATE_CAPTURING,
+    eSTATE_EXIT,
+    eSTATE_COUNT
+}camera_fsm_e;
+
+typedef enum
+{
     IO_METHOD_READ,
     IO_METHOD_MMAP,
     IO_METHOD_USERPTR
@@ -125,6 +133,7 @@ void camera_init(INT32 *fd)
 
 void *camera_task(void *threadp)
 {
+    camera_fsm_e state = eSTATE_ADJUSTING;
     osal_task_start_args_t args = *(osal_task_start_args_t *)threadp;
 
     osal_id_t id = args.task_id;
@@ -137,32 +146,45 @@ void *camera_task(void *threadp)
 
     while(DEF_TRUE)
     {
-        BOOL_T saveFrame = ignoreFrames >= MAX_IGNORE_FRAMES;
-        if (SAVED_FRAMES_MAX <= num_writes)
+        switch (state)
         {
-            break;
-        }
-
-        if (SYS_SUCCESS == framebuffer_writeframe(camera_fd, saveFrame))
-        {
-            if (saveFrame)
+            case eSTATE_ADJUSTING:
             {
-                SYS_TRACE("Writing frame");
-                num_writes++;
-            }                
-            else
+                if (SYS_FAILURE != framebuffer_writeframe(camera_fd, DEF_FALSE))
+                {
+                    SYS_TRACE("Ignore frame");
+                    ignoreFrames++;
+                }
+                if (ignoreFrames >= MAX_IGNORE_FRAMES)
+                {
+                    state = eSTATE_CAPTURING;
+                }
+                break;
+            }
+            case eSTATE_CAPTURING:
             {
-                SYS_TRACE("Ignore frame");
-                ignoreFrames++;
-            }   
+                if (SYS_SUCCESS == framebuffer_writeframe(camera_fd, DEF_TRUE))
+                {
+                    SYS_TRACE("Writing frame: %u", num_writes);
+                    num_writes++;
+                }
+                if (SAVED_FRAMES_MAX <= num_writes)
+                {
+                    state = eSTATE_EXIT;
+                }
+                break;
+            }
+            case eSTATE_EXIT:
+            {
+                SYS_TRACE("Camera Task Exiting...");
+                camera_capturestate(eCAMERA_OFF);
+                osal_task_delete(id, DEF_FALSE);
+                break;
+            }
         }
 
         osal_task_delay(id);
     }
-
-    SYS_TRACE("Camera Task Exiting...");
-    camera_capturestate(eCAMERA_OFF);
-    osal_task_delete(id, DEF_FALSE);
 
     return NULL;
 }

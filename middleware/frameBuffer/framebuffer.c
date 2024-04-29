@@ -22,7 +22,14 @@ ringbuffer_typedef(frame_t, rawImageBuffer_t);
 static rawImageBuffer_t incomingBuffer;
 
 #define NUM_FRAME_BUFS 16
+
+#if defined(CAMERA_ACQUISITION_1HZ)
+#define OVERSAMPLE_FRAME 20
+#elif defined(CAMERA_ACQUISITION_10HZ)
 #define OVERSAMPLE_FRAME 2
+#else
+#error "No acquisition mode defined"
+#endif
 
 struct buffer {
     UINT08 *start;
@@ -115,11 +122,12 @@ sys_result_e framebuffer_initframebuffers(INT32 fd)
 sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
 {
     fd_set fds;
-    sys_result_e ret;
     struct v4l2_buffer buf = { 0 };
 
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
+
+    BOOL_T writeCondition = saveFrame && (frame_cnt % OVERSAMPLE_FRAME == 0);
 
     FD_ZERO(&fds);
     FD_SET(fd, &fds);
@@ -128,13 +136,12 @@ sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
         return SYS_IGNORE;
     }
 
-    ret = framebuffer_dequeueframe(&buf);
-    if (SYS_SUCCESS != ret)
+    if (SYS_SUCCESS != framebuffer_dequeueframe(&buf))
     {
         return SYS_FAILURE;
     }
 
-    if (SYS_SUCCESS == ret && saveFrame && (frame_cnt % OVERSAMPLE_FRAME == 0))
+    if (writeCondition)
     {
         if (!ringbuffer_isFull(&incomingBuffer))
         {
@@ -148,11 +155,22 @@ sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
         }
     }
 
-    frame_cnt++;
+    if(saveFrame)
+        frame_cnt++;
 
-    ret = framebuffer_queueframe(&buf);
+    if (SYS_SUCCESS != framebuffer_queueframe(&buf))
+    {
+        return SYS_FAILURE;
+    }
 
-    return ret;
+    if (writeCondition)
+    {
+        return SYS_SUCCESS;
+    }
+    else
+    {
+        return SYS_IGNORE;
+    }
 }
 
 sys_result_e framebuffer_deinit(void)
