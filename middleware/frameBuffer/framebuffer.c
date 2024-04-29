@@ -21,15 +21,7 @@ ringbuffer_typedef(frame_t, rawImageBuffer_t);
 
 static rawImageBuffer_t incomingBuffer;
 
-#define NUM_FRAME_BUFS 16
-
-#if defined(CAMERA_ACQUISITION_1HZ)
-#define OVERSAMPLE_FRAME 20
-#elif defined(CAMERA_ACQUISITION_10HZ)
-#define OVERSAMPLE_FRAME 2
-#else
-#error "No acquisition mode defined"
-#endif
+#define NUM_FRAME_BUFS 4
 
 struct buffer {
     UINT08 *start;

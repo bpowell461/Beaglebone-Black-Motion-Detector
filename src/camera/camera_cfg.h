@@ -10,6 +10,14 @@
 
 #define MAX_IGNORE_FRAMES (100u)
 
+#if defined(CAMERA_ACQUISITION_1HZ)
+#define OVERSAMPLE_FRAME 20
+#elif defined(CAMERA_ACQUISITION_10HZ)
+#define OVERSAMPLE_FRAME 2
+#else
+#error "No acquisition mode defined"
+#endif
+
 #if defined(CAMERA_USE_YUV)
 #define PIXEL_FORMAT_CAMERA (V4L2_PIX_FMT_YUYV)
 #define PIXEL_FORMAT_FIELD  (V4L2_FIELD_NONE)
