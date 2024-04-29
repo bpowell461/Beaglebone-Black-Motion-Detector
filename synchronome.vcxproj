@@ -108,6 +108,8 @@
       <CLanguageStandard>gnu99</CLanguageStandard>
       <CppLanguageStandard>gnu++03</CppLanguageStandard>
       <PreprocessorDefinitions>BEAGLEBONE; DEBUG; </PreprocessorDefinitions>
+      <AdditionalOptions>-march=armv7-a -mtune=cortex-a8 -mfpu=neon -ftree-vectorize -ffast-math %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <Link>
       <AdditionalDependencies>-pthread;-lrt;%(AdditionalDependencies)</AdditionalDependencies>

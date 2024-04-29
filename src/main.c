@@ -48,14 +48,14 @@ int main(void)
 
     prio = 80;
     osal_id_t transcoder_id;
-    if (SYS_SUCCESS != osal_task_create(&transcoder_id, "transcoder", 0, prio, transcoder_task, (2 * TASK_RATE_10HZ), NULL))
+    if (SYS_SUCCESS != osal_task_create(&transcoder_id, "transcoder", 0, prio, transcoder_task, (TASK_RATE_10HZ), NULL))
     {
         SYS_TRACE("ERR: NVM TASK CREATE");
     }
 
     prio = 75;
     osal_id_t nvm_id;
-    if (SYS_SUCCESS != osal_task_create(&nvm_id, "nvm", 0, prio, nvm_task, (3 * TASK_RATE_10HZ), NULL))
+    if (SYS_SUCCESS != osal_task_create(&nvm_id, "nvm", 0, prio, nvm_task, (2 * TASK_RATE_10HZ), NULL))
     {
         SYS_TRACE("ERR: NVM TASK CREATE");
     }
