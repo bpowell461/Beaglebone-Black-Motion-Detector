@@ -181,6 +181,11 @@ void *camera_task(void *threadp)
                 osal_task_delete(id, DEF_FALSE);
                 break;
             }
+            default:
+            {
+                state = eSTATE_EXIT;
+                break;
+            }
         }
 
         osal_task_delay(id);
