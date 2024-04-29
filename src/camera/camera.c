@@ -17,7 +17,7 @@
 
 /** Macros **/
 #define MAX_WRITE_ERRORS (5u)
-#define MAX_IGNORE_FRAMES (8u)
+#define MAX_IGNORE_FRAMES (10u)
 
 /** Type Definitions **/
 typedef enum
@@ -108,24 +108,6 @@ void camera_init(INT32 *fd)
 
     if ((fmt.fmt.pix.width != PIXEL_WIDTH) || (fmt.fmt.pix.height != PIXEL_HEIGHT))
         SYS_TRACE("WARN: driver is sending image at %dx%d\n", fmt.fmt.pix.width, fmt.fmt.pix.height);
-
-    struct v4l2_streamparm streamparm;
-    memset(&streamparm, 0, sizeof(streamparm));
-    streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    if (SYS_SUCCESS != camera_ioctl(camera_fd, VIDIOC_G_PARM, &streamparm))
-    {
-        SYS_TRACE("ERR: Getting VIDIOC parameters");
-        exit(EXIT_FAILURE);
-    }
-
-    streamparm.parm.capture.capturemode |= V4L2_CAP_TIMEPERFRAME;
-    streamparm.parm.capture.timeperframe.numerator = 1;
-    streamparm.parm.capture.timeperframe.denominator = 30;
-    if (SYS_SUCCESS != camera_ioctl(camera_fd, VIDIOC_S_PARM, &streamparm))
-    {
-        SYS_TRACE("ERR: Setting VIDIOC parameters");
-        exit(EXIT_FAILURE);
-    }
 
     *fd = camera_fd;
 
