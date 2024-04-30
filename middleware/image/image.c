@@ -21,7 +21,6 @@ typedef struct
 }buffer_mtx_handle_t;
 
 static rgbImageBuffer_t imageBuffer;
-static buffer_mtx_handle_t buf_mtx_handle;
 static UINT08 frameIdx = 0;
 
 static BOOL_T imagebuffer_initialized = DEF_FALSE;
@@ -101,7 +100,7 @@ sys_result_e image_convert(UINT32 srcFmt, UINT32 destFmt, const UINT08 *src_fram
     {
         case V4L2_PIX_FMT_RGB888:
         {
-            SYSLOG_MEASURE(rgb888_convert(srcFmt, src_frame, dest_frame), "rgb888_convert");
+            rgb888_convert(srcFmt, src_frame, dest_frame);
         }
         default:
         {
@@ -181,14 +180,14 @@ sys_result_e image_save(const rgb_frame_t *buf, const UINT32 size)
     INT32 ret;
 
     sprintf(out_name, IMAGE_FILE("/media/card/pics/frame%03d"), frameIdx);
-    INT32 file = open(out_name, O_RDWR | O_CREAT | O_TRUNC | O_NONBLOCK, 0666);
+    INT32 file = open(out_name, O_RDWR | O_CREAT | O_TRUNC | O_NONBLOCK | O_NDELAY);
     if (0 > file)
     {
         SYS_TRACE("ERR: FILE OPEN");
         return SYS_FAILURE;
     }
 
-    SYSLOG_MEASURE(ret = file_write_blocking(file, buf, size), "file_write_blocking");
+    ret = file_write_blocking(file, buf, size);
     if (0 > ret)
     {
         SYS_TRACE("ERR: WRITE");
@@ -221,7 +220,7 @@ static INT32 file_write_blocking(INT32 fd, const rgb_frame_t *buf, size_t size)
         start_time = buf->timestamp;
     }
 
-    sprintf(header, IMAGE_HEADER, syslog_getsysname(), ((buf->timestamp.tv_nsec - start_time.tv_nsec) / (long)(USEC_PER_MSEC * NSEC_PER_USEC)));
+    sprintf(header, IMAGE_HEADER, syslog_getsysname(), ((buf->timestamp.tv_nsec / (long)(USEC_PER_MSEC * NSEC_PER_USEC))));
 
     write(fd, header, strlen(header));
 

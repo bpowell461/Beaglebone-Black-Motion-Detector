@@ -132,7 +132,6 @@ void *camera_task(void *threadp)
             {
                 if (SYS_FAILURE != framebuffer_writeframe(camera_fd, DEF_FALSE))
                 {
-                    SYS_TRACE("Ignore frame");
                     ignoreFrames++;
                 }
                 if (ignoreFrames >= MAX_IGNORE_FRAMES)
@@ -146,7 +145,6 @@ void *camera_task(void *threadp)
                 osal_stop_scheduler();
                 if (SYS_SUCCESS == framebuffer_writeframe(camera_fd, DEF_TRUE))
                 {
-                    SYS_TRACE("Writing frame: %u", num_writes);
                     num_writes++;
                 }
                 if (SAVED_FRAMES_MAX <= num_writes)

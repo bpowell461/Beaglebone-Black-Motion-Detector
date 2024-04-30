@@ -56,7 +56,7 @@ sys_result_e syslog_init(char* assignment, const int courseNum, const int assign
         char buf[SYSLOG_FILE_NAME_SIZE];
         snprintf(buf, sizeof(buf), "syslog-prog-%i.%i.txt", courseNum, assignmentNum);
 
-        trace_fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK);
+        trace_fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK | O_NDELAY);
         if (trace_fd < 0)
             return SYS_FAILURE;
 

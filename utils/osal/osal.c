@@ -600,7 +600,6 @@ static void* osal_signal_handler_task(void* threadp)
 
 static inline void osal_task_generic_sequencer(void)
 {
-    osal_mutex_lock(&os_sched_mutex);
     for (UINT32 i = 0; i < MAX_TASKS; i++)
     {
         if (osal_task_sequencers[i].task_state != TASKSTATE_UNUSED && osal_task_sequencers[i].period_cnts != 0)
@@ -611,5 +610,4 @@ static inline void osal_task_generic_sequencer(void)
             }
         }
     }
-    osal_mutex_unlock(&os_sched_mutex);
 }
