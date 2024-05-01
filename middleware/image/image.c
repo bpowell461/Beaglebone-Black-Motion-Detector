@@ -31,12 +31,12 @@ static INT32 file_write_blocking(INT32 fd, const rgb_frame_t *buf, size_t size);
 
 /* COLOR LUTS */
 
-static const INT32 PRECISION = (INT32)(32768);
-static const INT32 COEFFICIENT_Y = (INT32)(1.164f * PRECISION + 0.5f);
-static const INT32 COEFFICIENT_RV = (INT32)(1.596f * PRECISION + 0.5f);
-static const INT32 COEFFICIENT_GU = (INT32)(0.391f * PRECISION + 0.5f);
-static const INT32 COEFFICIENT_GV = (INT32)(0.813f * PRECISION + 0.5f);
-static const INT32 COEFFICIENT_BU = (INT32)(2.018f * PRECISION + 0.5f);
+static const INT32 PRECISION      = (INT32)(32768);
+static const INT32 COEFFICIENT_Y  = (INT32)(1.164f * (float)PRECISION + 0.5f);
+static const INT32 COEFFICIENT_RV = (INT32)(1.596f * (float)PRECISION + 0.5f);
+static const INT32 COEFFICIENT_GU = (INT32)(0.391f * (float)PRECISION + 0.5f);
+static const INT32 COEFFICIENT_GV = (INT32)(0.813f * (float)PRECISION + 0.5f);
+static const INT32 COEFFICIENT_BU = (INT32)(2.018f * (float)PRECISION + 0.5f);
 
 static const INT32 CoeffecientsGU[256] = {
     -COEFFICIENT_GU * (0 - 128),
