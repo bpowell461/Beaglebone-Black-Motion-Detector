@@ -5,7 +5,7 @@
 #include "utils.h"
 
 #define CAMERA_USE_PPM
-#define SAVED_FRAMES_MAX    1801
+#define SAVED_FRAMES_MAX    100
 #define CAMERA_ACQUISITION_10HZ
 
 #define MAX_IGNORE_FRAMES (100u)

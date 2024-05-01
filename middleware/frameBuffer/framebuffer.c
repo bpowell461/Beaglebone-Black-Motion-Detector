@@ -54,7 +54,7 @@ sys_result_e framebuffer_init(INT32 *fd)
         buffers[i].size = framebuffer_mapbuffers(i, &buffers[i].start);
     }
 
-    ringbuffer_init(incomingBuffer, frame_t, 32);
+    ringbuffer_init(incomingBuffer, frame_t, 64);
 
     framebuffer_initframebuffers(framebuffer_fd);
 

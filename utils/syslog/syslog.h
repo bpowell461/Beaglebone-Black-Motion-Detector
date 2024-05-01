@@ -23,20 +23,20 @@
 
     #if defined(SYSLOG_MEASURING_ENABLED)
         #define SYSLOG_INITMEASURE() struct timespec measure[2]
+        #define SYSLOG_INITPROFILE() time_t times[2]
         #define SYSLOG_MEASURE(x, y) \
-            clock_gettime(CLOCK_MONOTONIC, &measure[0]); \
+            clock_gettime(CLOCK_REALTIME, &measure[0]); \
             ((x)); \
-            clock_gettime(CLOCK_MONOTONIC, &measure[1]); \
-            SYS_TRACE("[SYSLOG_MEASURE] EXECUTION TIME (%s): %ld usec", (y), (measure[1].tv_nsec - measure[0].tv_nsec) / (1000))
+            clock_gettime(CLOCK_REALTIME, &measure[1]); \
+            SYS_TRACE("[SYSLOG_MEASURE] EXECUTION TIME (%s): %llu usec", (y), (measure[1].tv_nsec - measure[0].tv_nsec) / (1000))
 
-        #define SYSLOG_STARTPROFILE(x, y) \
-            clock_gettime(CLOCK_MONOTONIC, &measure[0]); \
-            SYS_TRACE("[SYSLOG_MEASURE] START TIME (%s): %ld msec", (y), (measure[0].tv_nsec) / (1000 * 1000)) 
+        #define SYSLOG_STARTPROFILE(y) \
+            time(&times[0]); \
+            SYS_TRACE("[SYSLOG_MEASURE] START TIME (%s): %ld sec", (y), times[0]) 
 
-        #define SYSLOG_ENDPROFILE(x, y) \
-            clock_gettime(CLOCK_MONOTONIC, &measure[1]); \
-            SYS_TRACE("[SYSLOG_MEASURE] END TIME (%s): %ld msec", (y), (measure[1].tv_nsec) / (1000 * 1000)) \
-            SYS_TRACE("[SYSLOG_MEASURE] EXECUTION TIME (%s): %ld usec", (y), (measure[1].tv_nsec - measure[0].tv_nsec) / (1000))
+        #define SYSLOG_ENDPROFILE(y) \
+             time(&times[1]); \
+             SYS_TRACE("[SYSLOG_MEASURE] END TIME (%s): %ld sec", (y), times[1])
             
     #else
         #define SYSLOG_INITMEASURE() {}

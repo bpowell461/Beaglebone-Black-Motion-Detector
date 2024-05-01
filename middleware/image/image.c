@@ -1341,7 +1341,7 @@ sys_result_e imagebuffer_init(void)
     if (imagebuffer_initialized)
         return SYS_SUCCESS;
 
-    ringbuffer_init(imageBuffer, rgb_frame_t, 32);
+    ringbuffer_init(imageBuffer, rgb_frame_t, 128);
 
     return SYS_SUCCESS;
 }
