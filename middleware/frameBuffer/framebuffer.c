@@ -115,21 +115,12 @@ sys_result_e framebuffer_initframebuffers(INT32 fd)
 
 sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
 {
-    fd_set fds;
     struct v4l2_buffer buf = { 0 };
 
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
 
     BOOL_T writeCondition = saveFrame && (frame_cnt % OVERSAMPLE_FRAME == 0);
-    
-    FD_ZERO(&fds);
-    FD_SET(fd, &fds);
-    int r = select(fd + 1, &fds, NULL, NULL, 0);
-    if (-1 == r) {
-        return SYS_IGNORE;
-    }
-
     
     if (SYS_SUCCESS != framebuffer_dequeueframe(&buf))
     {
@@ -180,9 +171,14 @@ sys_result_e framebuffer_deinit(void)
 
 static sys_result_e framebuffer_ioctl(INT32 fd, UINT32 request, void *arg)
 {
-    if (-1 == ioctl(fd, request, arg))
+    INT32 ret = ioctl(fd, request, arg);
+    if (-1 == ret)
     {
         return SYS_FAILURE;
+    }
+    else if (EAGAIN == ret)
+    {
+        return SYS_IGNORE;
     }
 
     return SYS_SUCCESS;
@@ -243,13 +239,13 @@ static sys_result_e framebuffer_queueframe(struct v4l2_buffer *bufd)
 
 static sys_result_e framebuffer_dequeueframe(struct v4l2_buffer *buf)
 {
-    if (SYS_SUCCESS != framebuffer_ioctl(framebuffer_fd, VIDIOC_DQBUF, buf))
+    sys_result_e ret = framebuffer_ioctl(framebuffer_fd, VIDIOC_DQBUF, buf);
+    if (SYS_FAILURE != ret)
     {
         SYS_TRACE("ERR: FRAMEBUFFER DQBUF");
-        return SYS_FAILURE;
     }
 
-    return SYS_SUCCESS;
+    return ret;
 }
 
 static inline void framebuffer_printcapturetime(struct timespec *capture_time)
