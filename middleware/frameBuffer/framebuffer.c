@@ -22,7 +22,7 @@ ringbuffer_typedef(frame_t, rawImageBuffer_t);
 static rawImageBuffer_t incomingBuffer;
 static struct timespec start_time;
 
-#define NUM_FRAME_BUFS 4
+#define NUM_FRAME_BUFS 32
 
 struct buffer {
     UINT08 *start;
@@ -133,7 +133,7 @@ sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
         {
             clock_gettime(CLOCK_MONOTONIC, &incomingBuffer.data[incomingBuffer.writePtr].timestamp);
             framebuffer_printcapturetime(&incomingBuffer.data[incomingBuffer.writePtr].timestamp);
-            memcpy(incomingBuffer.data[incomingBuffer.writePtr].bytes, buffers[buf.index].start, buf.bytesused);
+            ringbuffer_memcpy(incomingBuffer.data[incomingBuffer.writePtr].bytes, buffers[buf.index].start, buf.bytesused);
             ringbuffer_inc_writeptr(&incomingBuffer);
         }
         else
@@ -172,16 +172,18 @@ sys_result_e framebuffer_deinit(void)
 static sys_result_e framebuffer_ioctl(INT32 fd, UINT32 request, void *arg)
 {
     INT32 ret = ioctl(fd, request, arg);
-    if (-1 == ret)
-    {
-        return SYS_FAILURE;
-    }
-    else if (EAGAIN == ret)
+    if (EAGAIN == ret)
     {
         return SYS_IGNORE;
     }
-
-    return SYS_SUCCESS;
+    else if (0 == ret)
+    {
+        return SYS_SUCCESS;
+    }
+    else
+    {
+        return SYS_FAILURE;
+    }
 }
 
 static UINT32 framebuffer_requestbuffers(UINT08 count)
@@ -240,7 +242,7 @@ static sys_result_e framebuffer_queueframe(struct v4l2_buffer *bufd)
 static sys_result_e framebuffer_dequeueframe(struct v4l2_buffer *buf)
 {
     sys_result_e ret = framebuffer_ioctl(framebuffer_fd, VIDIOC_DQBUF, buf);
-    if (SYS_FAILURE != ret)
+    if (SYS_FAILURE == ret)
     {
         SYS_TRACE("ERR: FRAMEBUFFER DQBUF");
     }

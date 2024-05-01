@@ -58,6 +58,8 @@ void camera_init(INT32 *fd)
 {
     /* V4L2 Format Vars */
     struct v4l2_format  fmt;
+    struct v4l2_control ctrl;
+    struct v4l2_streamparm streamparm;
     struct v4l2_capability cap;
     v4l2_io_e io = IO_METHOD_MMAP;
 
@@ -106,6 +108,32 @@ void camera_init(INT32 *fd)
 
     if ((fmt.fmt.pix.width != PIXEL_WIDTH) || (fmt.fmt.pix.height != PIXEL_HEIGHT))
         SYS_TRACE("WARN: driver is sending image at %dx%d\n", fmt.fmt.pix.width, fmt.fmt.pix.height);
+
+    /* Setting camera framerate */
+    CLEAR(streamparm);
+
+    streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    streamparm.parm.capture.timeperframe.numerator = 1;
+    streamparm.parm.capture.timeperframe.denominator = 30;
+
+    camera_ioctl(camera_fd, VIDIOC_S_PARM, &streamparm);
+    camera_ioctl(camera_fd, VIDIOC_G_PARM, &streamparm);
+    SYS_TRACE("Camera framerate: %u FPS", streamparm.parm.capture.timeperframe.denominator);
+
+    /* Setting camera control */
+    CLEAR(ctrl);
+
+    ctrl.id = V4L2_CID_EXPOSURE_ABSOLUTE;
+    ctrl.value = V4L2_EXPOSURE_MANUAL;
+    camera_ioctl(camera_fd, VIDIOC_S_CTRL, &ctrl);
+
+    ctrl.id = V4L2_CID_FOCUS_AUTO;
+    ctrl.value = DEF_FALSE;
+    camera_ioctl(camera_fd, VIDIOC_S_CTRL, &ctrl);
+
+    ctrl.id = V4L2_CID_FOCUS_ABSOLUTE;
+    ctrl.value = 0;
+    camera_ioctl(camera_fd, VIDIOC_S_CTRL, &ctrl);
 
     *fd = camera_fd;
 

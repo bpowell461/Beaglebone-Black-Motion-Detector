@@ -12,7 +12,7 @@
 #include "types.h"
 #include <string.h>
 
-#define RB_MEMCPY   memcpy
+#define ringbuffer_memcpy   memcpy
 
 #define ringbuffer_typedef(TYPE, NAME) \
     typedef struct { \
@@ -48,7 +48,7 @@ typedef enum
     }while(0) 
 #define ringbuffer_write_memcpy(BUF, DATA, SIZE) \
     do { \
-        RB_MEMCPY(&((BUF)->data[(BUF)->writePtr]), (DATA), (SIZE)); \
+        ringbuffer_memcpy(&((BUF)->data[(BUF)->writePtr]), (DATA), (SIZE)); \
         ringbuffer_inc_writeptr((BUF)); \
     }while(0) 
 
