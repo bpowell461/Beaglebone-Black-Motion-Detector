@@ -49,7 +49,7 @@
 #endif
 
 #define IMAGE_FILE(x) (x IMAGE_EXT)
-#define IMAGE_HEADER ("P6\n# %s\n# Time (ms): %ld \n"STR(PIXEL_WIDTH)" "STR(PIXEL_HEIGHT)"\n255\n")
+#define IMAGE_HEADER ("P6\n# %s\n# Timestamp: %u.%u \n"STR(PIXEL_WIDTH)" "STR(PIXEL_HEIGHT)"\n255\n")
 #define RGB_FRAME_SIZE_BYTES (PIXEL_WIDTH * PIXEL_HEIGHT * 3)
 
 /* Custom Image Formats */

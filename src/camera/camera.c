@@ -107,7 +107,10 @@ void camera_init(INT32 *fd)
     }
 
     if ((fmt.fmt.pix.width != PIXEL_WIDTH) || (fmt.fmt.pix.height != PIXEL_HEIGHT))
-        SYS_TRACE("WARN: driver is sending image at %dx%d\n", fmt.fmt.pix.width, fmt.fmt.pix.height);
+    {
+        SYS_TRACE("ERR: driver is sending image at %dx%d\n", fmt.fmt.pix.width, fmt.fmt.pix.height);
+        exit(EXIT_FAILURE);
+    }
 
     /* Setting camera framerate */
     CLEAR(streamparm);
@@ -195,7 +198,6 @@ void *camera_task(void *threadp)
                 break;
             }
         }
-
         osal_task_delay(id);
     }
 

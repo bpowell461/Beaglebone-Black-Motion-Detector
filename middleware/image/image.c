@@ -25,8 +25,6 @@ static UINT32 frameIdx = 0;
 
 static BOOL_T imagebuffer_initialized = DEF_FALSE;
 
-static struct timespec start_time;
-
 static void yuv2rgb(INT32 y, INT32 u, INT32 v, UINT08 *r, UINT08 *g, UINT08 *b);
 static sys_result_e rgb888_convert(UINT32 srcFmt, const UINT08 *src_frame, UINT08 *dest_frame);
 static INT32 file_write_blocking(INT32 fd, const rgb_frame_t *buf, size_t size);
@@ -1516,12 +1514,7 @@ static INT32 file_write_blocking(INT32 fd, const rgb_frame_t *buf, size_t size)
 
     char header[256];
 
-    if (!frameIdx)
-    {
-        start_time = buf->timestamp;
-    }
-
-    sprintf(header, IMAGE_HEADER, syslog_getsysname(), ((buf->timestamp.tv_nsec / (long)(USEC_PER_MSEC * NSEC_PER_USEC))));
+    sprintf(header, IMAGE_HEADER, syslog_getsysname(), buf->timestamp.tv_sec, (UINT32)((buf->timestamp.tv_nsec / (long)(USEC_PER_MSEC * NSEC_PER_USEC))));
 
     write(fd, header, strlen(header));
 
