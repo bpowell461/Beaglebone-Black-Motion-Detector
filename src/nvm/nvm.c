@@ -51,7 +51,6 @@ void *nvm_task(void *threadp)
                     imagebuffer_endread();
                 }
 
-
                 if (image_getsavedframes() >= SAVED_FRAMES_MAX)
                 {
                     exit_task = DEF_TRUE;

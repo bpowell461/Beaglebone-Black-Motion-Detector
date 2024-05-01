@@ -10,6 +10,6 @@ sys_result_e imagebuffer_endread(void);
 sys_result_e imagebuffer_write(rgb_frame_t *frame);
 sys_result_e image_convert(UINT32 srcFmt, UINT32 destFmt, const UINT08 *src_frame, UINT08 *dest_frame);
 sys_result_e image_save(const rgb_frame_t *buf, const UINT32 size);
-UINT08       image_getsavedframes(void);
+UINT32       image_getsavedframes(void);
 
 #endif // !IMAGE_H_

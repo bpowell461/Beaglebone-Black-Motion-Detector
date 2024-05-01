@@ -5,15 +5,15 @@
 #include "utils.h"
 
 #define CAMERA_USE_PPM
-#define SAVED_FRAMES_MAX    16
-#define CAMERA_ACQUISITION_1HZ
+#define SAVED_FRAMES_MAX    1801
+#define CAMERA_ACQUISITION_10HZ
 
 #define MAX_IGNORE_FRAMES (100u)
 
 #if defined(CAMERA_ACQUISITION_1HZ)
-#define OVERSAMPLE_FRAME 20
+#define OVERSAMPLE_FRAME 30
 #elif defined(CAMERA_ACQUISITION_10HZ)
-#define OVERSAMPLE_FRAME 2
+#define OVERSAMPLE_FRAME 3
 #else
 #error "No acquisition mode defined"
 #endif

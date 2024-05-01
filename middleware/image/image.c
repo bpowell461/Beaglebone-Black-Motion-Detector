@@ -21,7 +21,7 @@ typedef struct
 }buffer_mtx_handle_t;
 
 static rgbImageBuffer_t imageBuffer;
-static UINT08 frameIdx = 0;
+static UINT32 frameIdx = 0;
 
 static BOOL_T imagebuffer_initialized = DEF_FALSE;
 
@@ -179,7 +179,7 @@ sys_result_e image_save(const rgb_frame_t *buf, const UINT32 size)
     char out_name[256];
     INT32 ret;
 
-    sprintf(out_name, IMAGE_FILE("/media/card/pics/frame%03d"), frameIdx);
+    sprintf(out_name, IMAGE_FILE("/media/card/pics/frame%04d"), frameIdx);
     INT32 file = open(out_name, O_RDWR | O_CREAT | O_TRUNC | O_NONBLOCK | O_NDELAY);
     if (0 > file)
     {
@@ -201,7 +201,7 @@ sys_result_e image_save(const rgb_frame_t *buf, const UINT32 size)
     return SYS_SUCCESS;
 }
 
-UINT08 image_getsavedframes(void)
+UINT32 image_getsavedframes(void)
 {
     return frameIdx;
 }

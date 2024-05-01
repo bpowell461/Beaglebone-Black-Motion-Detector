@@ -42,8 +42,8 @@ typedef enum
 
 /** Static Variables **/
 static INT32 camera_fd;
-static UINT08 num_writes = 0;
-static UINT08 ignoreFrames = 0;
+static UINT32 num_writes = 0;
+static UINT32 ignoreFrames = 0;
 
 static char *dev_name = "/dev/video0";
 

@@ -27,7 +27,17 @@
             clock_gettime(CLOCK_MONOTONIC, &measure[0]); \
             ((x)); \
             clock_gettime(CLOCK_MONOTONIC, &measure[1]); \
-            SYS_TRACE("EXECUTION TIME (%s): %ld usec", (y), (measure[1].tv_nsec - measure[0].tv_nsec) / (1000))
+            SYS_TRACE("[SYSLOG_MEASURE] EXECUTION TIME (%s): %ld usec", (y), (measure[1].tv_nsec - measure[0].tv_nsec) / (1000))
+
+        #define SYSLOG_STARTPROFILE(x, y) \
+            clock_gettime(CLOCK_MONOTONIC, &measure[0]); \
+            SYS_TRACE("[SYSLOG_MEASURE] START TIME (%s): %ld msec", (y), (measure[0].tv_nsec) / (1000 * 1000)) 
+
+        #define SYSLOG_ENDPROFILE(x, y) \
+            clock_gettime(CLOCK_MONOTONIC, &measure[1]); \
+            SYS_TRACE("[SYSLOG_MEASURE] END TIME (%s): %ld msec", (y), (measure[1].tv_nsec) / (1000 * 1000)) \
+            SYS_TRACE("[SYSLOG_MEASURE] EXECUTION TIME (%s): %ld usec", (y), (measure[1].tv_nsec - measure[0].tv_nsec) / (1000))
+            
     #else
         #define SYSLOG_INITMEASURE() {}
         #define SYSLOG_MEASURE(x, y) x
