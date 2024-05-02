@@ -5,15 +5,16 @@
 #include "utils.h"
 
 #define CAMERA_USE_PPM
-#define SAVED_FRAMES_MAX    100
-#define CAMERA_ACQUISITION_10HZ
+#define CAMERA_ACQUISITION_1HZ
 
 #define MAX_IGNORE_FRAMES (100u)
 
 #if defined(CAMERA_ACQUISITION_1HZ)
 #define OVERSAMPLE_FRAME 30
+#define SAVED_FRAMES_MAX    181
 #elif defined(CAMERA_ACQUISITION_10HZ)
 #define OVERSAMPLE_FRAME 3
+#define SAVED_FRAMES_MAX    181
 #else
 #error "No acquisition mode defined"
 #endif
@@ -49,23 +50,28 @@
 #endif
 
 #define IMAGE_FILE(x) (x IMAGE_EXT)
-#define IMAGE_HEADER ("P6\n# %s\n# Timestamp: %u.%u \n"STR(PIXEL_WIDTH)" "STR(PIXEL_HEIGHT)"\n255\n")
+#define IMAGE_HEADER ("P6\n# %s\n# Timestamp: %ld.%ld \n"STR(PIXEL_WIDTH)" "STR(PIXEL_HEIGHT)"\n255\n")
 #define RGB_FRAME_SIZE_BYTES (PIXEL_WIDTH * PIXEL_HEIGHT * 3)
 
 /* Custom Image Formats */
 #define V4L2_PIX_FMT_RGB888 (v4l2_fourcc('R', 'G', 'B', '8'))
 
+typedef struct
+{
+    long sec;
+    long msec;
+}frame_timeval;
 /* This is the "raw" frame size */
 typedef struct
 {
-    struct timespec timestamp;
+    frame_timeval timestamp;
     UINT08 bytes[FRAME_SIZE];
 }frame_t;
 
 /* Modified frame size using RGB888 */
 typedef struct
 {
-    struct timespec timestamp;
+    frame_timeval timestamp;
     UINT08 bytes[RGB_FRAME_SIZE_BYTES];
 }rgb_frame_t;
 

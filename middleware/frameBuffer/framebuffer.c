@@ -20,7 +20,7 @@ SYSLOG_INITMEASURE();
 ringbuffer_typedef(frame_t, rawImageBuffer_t);
 
 static rawImageBuffer_t incomingBuffer;
-static struct timespec start_time;
+static struct timeval start_time;
 
 #define NUM_FRAME_BUFS 32
 
@@ -33,13 +33,13 @@ static struct buffer buffers[NUM_FRAME_BUFS];
 
 static INT32 framebuffer_fd;
 static UINT32 frame_cnt = 0;
+static UINT32 save_cnt = 0;
 
 static sys_result_e framebuffer_ioctl(INT32 fd, UINT32 request, void *arg);
 static UINT32       framebuffer_requestbuffers(UINT08 count);
 static UINT32       framebuffer_mapbuffers(UINT08 idx, UINT08 **bufferPtr);
 static sys_result_e       framebuffer_queueframe(struct v4l2_buffer *buf);
 static sys_result_e framebuffer_dequeueframe(struct v4l2_buffer *buf);
-static inline void framebuffer_printcapturetime(struct timespec *capture_time);
 
 sys_result_e framebuffer_init(INT32 *fd)
 {
@@ -139,9 +139,18 @@ sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
     {
         if (!ringbuffer_isFull(&incomingBuffer))
         {
-            clock_gettime(CLOCK_MONOTONIC, &incomingBuffer.data[incomingBuffer.writePtr].timestamp);
-            framebuffer_printcapturetime(&incomingBuffer.data[incomingBuffer.writePtr].timestamp);
+            if (!save_cnt)
+            {
+                start_time = buf.timestamp;
+            }
+
             ringbuffer_memcpy(incomingBuffer.data[incomingBuffer.writePtr].bytes, buffers[buf.index].start, buf.bytesused);
+
+            incomingBuffer.data[incomingBuffer.writePtr].timestamp.sec = buf.timestamp.tv_sec - start_time.tv_sec;
+            incomingBuffer.data[incomingBuffer.writePtr].timestamp.msec = (buf.timestamp.tv_usec - start_time.tv_usec);
+
+            save_cnt++;
+
             ringbuffer_inc_writeptr(&incomingBuffer);
         }
         else
@@ -256,21 +265,4 @@ static sys_result_e framebuffer_dequeueframe(struct v4l2_buffer *buf)
     }
 
     return ret;
-}
-
-static inline void framebuffer_printcapturetime(struct timespec *capture_time)
-{
-    long sec;
-    long msec;
-
-    if (!frame_cnt)
-    {
-        start_time = *capture_time;
-    }
-
-    sec = capture_time->tv_sec - start_time.tv_sec;
-
-    msec = (capture_time->tv_nsec - start_time.tv_nsec) / ((long)NSEC_PER_USEC * (long)USEC_PER_MSEC);
-
-    SYS_TRACE("[Frame Count: %u] [Image Capture Start Time: %u.%u seconds]", frame_cnt / OVERSAMPLE_FRAME, (UINT32)sec, (UINT32)msec);
 }

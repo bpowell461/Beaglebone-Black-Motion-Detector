@@ -68,6 +68,8 @@ static void process_frames(void)
     {
         image_convert(V4L2_PIX_FMT_YUYV, V4L2_PIX_FMT_RGB888, rawFrame->bytes, rgbFrame.bytes);
 
+        rgbFrame.timestamp = rawFrame->timestamp;
+
         imagebuffer_write(&rgbFrame);
 
         framebuffer_freeframe(camera_fd, rawFrame);

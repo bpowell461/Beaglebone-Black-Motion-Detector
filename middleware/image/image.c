@@ -1514,7 +1514,11 @@ static INT32 file_write_blocking(INT32 fd, const rgb_frame_t *buf, size_t size)
 
     char header[256];
 
-    sprintf(header, IMAGE_HEADER, syslog_getsysname(), buf->timestamp.tv_sec, (UINT32)((buf->timestamp.tv_nsec / (long)(USEC_PER_MSEC * NSEC_PER_USEC))));
+    long msec = buf->timestamp.msec / 1000;
+
+    SYS_TRACE("[Frame Count: %u] [Image Capture Start Time: %ld.%ld seconds]", frameIdx, buf->timestamp.sec, msec);
+
+    sprintf(header, IMAGE_HEADER, syslog_getsysname(), buf->timestamp.sec, msec);
 
     write(fd, header, strlen(header));
 
