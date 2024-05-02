@@ -22,7 +22,7 @@
     #endif
 
     #if defined(SYSLOG_MEASURING_ENABLED)
-        #define SYSLOG_INITMEASURE() struct timespec measure[2]
+        #define SYSLOG_INITMEASURE() struct timespec measure[2];
         #define SYSLOG_INITPROFILE() time_t times[2]
         #define SYSLOG_MEASURE(x, y) \
             clock_gettime(CLOCK_REALTIME, &measure[0]); \
@@ -45,7 +45,7 @@
 
 #else
 #define SYS_TRACE(...) {}
-#define SYSLOG_INITMEASURE() {}
+#define SYSLOG_INITMEASURE()
 #define SYSLOG_MEASURE(x, y) x
 #endif
 

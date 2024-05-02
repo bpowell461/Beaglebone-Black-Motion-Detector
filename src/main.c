@@ -58,7 +58,7 @@ int main(void)
 
     prio = 75;
     osal_id_t nvm_id;
-    if (SYS_SUCCESS != osal_task_create(&nvm_id, "nvm", 0, prio, nvm_task, (3 * TASK_RATE_30HZ), NULL))
+    if (SYS_SUCCESS != osal_task_create(&nvm_id, "nvm", 0, prio, nvm_task, (2 * TASK_RATE_30HZ), NULL))
     {
         SYS_TRACE("ERR: NVM TASK CREATE");
         exit(EXIT_FAILURE);

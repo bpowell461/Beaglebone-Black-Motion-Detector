@@ -107,7 +107,7 @@
       <AdditionalIncludeDirectories>C:\git\RTES\utils\osal;C:\git\RTES\utils\syslog;C:\git\RTES\utils\types;C:\git\RTES\utils\ringbuffer;C:\git\RTES\src\camera;C:\git\RTES\src\nvm;C:\git\RTES\middleware\frameBuffer;C:\git\RTES\middleware\image;C:\git\RTES\src\transcoder</AdditionalIncludeDirectories>
       <CLanguageStandard>gnu99</CLanguageStandard>
       <CppLanguageStandard>gnu++03</CppLanguageStandard>
-      <PreprocessorDefinitions>BEAGLEBONE; DEBUG; </PreprocessorDefinitions>
+      <PreprocessorDefinitions>BEAGLEBONE; DEBUG</PreprocessorDefinitions>
       <AdditionalOptions>-march=armv7-a -mtune=cortex-a8 -mfpu=neon -ftree-vectorize -ffast-math %(AdditionalOptions)</AdditionalOptions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>

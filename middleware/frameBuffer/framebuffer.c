@@ -15,8 +15,6 @@
 #include "osal.h"
 #include "camera_cfg.h"
 
-SYSLOG_INITMEASURE();
-
 ringbuffer_typedef(frame_t, rawImageBuffer_t);
 
 static rawImageBuffer_t incomingBuffer;
@@ -54,7 +52,7 @@ sys_result_e framebuffer_init(INT32 *fd)
         buffers[i].size = framebuffer_mapbuffers(i, &buffers[i].start);
     }
 
-    ringbuffer_init(incomingBuffer, frame_t, 64);
+    ringbuffer_init(incomingBuffer, frame_t, 128);
 
     framebuffer_initframebuffers(framebuffer_fd);
 
