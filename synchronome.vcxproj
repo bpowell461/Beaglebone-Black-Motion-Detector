@@ -102,6 +102,9 @@
     <ClInclude Include="utils\types\types.h" />
     <ClInclude Include="utils\types\utils.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Makefile" />
+  </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
       <AdditionalIncludeDirectories>C:\git\RTES\utils\osal;C:\git\RTES\utils\syslog;C:\git\RTES\utils\types;C:\git\RTES\utils\ringbuffer;C:\git\RTES\src\camera;C:\git\RTES\src\nvm;C:\git\RTES\middleware\frameBuffer;C:\git\RTES\middleware\image;C:\git\RTES\src\transcoder</AdditionalIncludeDirectories>

@@ -56,22 +56,17 @@
 /* Custom Image Formats */
 #define V4L2_PIX_FMT_RGB888 (v4l2_fourcc('R', 'G', 'B', '8'))
 
-typedef struct
-{
-    long sec;
-    long msec;
-}frame_timeval;
 /* This is the "raw" frame size */
 typedef struct
 {
-    frame_timeval timestamp;
+    struct timeval timestamp;
     UINT08 bytes[FRAME_SIZE];
 }frame_t;
 
 /* Modified frame size using RGB888 */
 typedef struct
 {
-    frame_timeval timestamp;
+    struct timeval timestamp;
     UINT08 bytes[RGB_FRAME_SIZE_BYTES];
 }rgb_frame_t;
 

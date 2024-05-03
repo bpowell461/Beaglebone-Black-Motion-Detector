@@ -144,8 +144,7 @@ sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
 
             ringbuffer_memcpy(incomingBuffer.data[incomingBuffer.writePtr].bytes, buffers[buf.index].start, buf.bytesused);
 
-            incomingBuffer.data[incomingBuffer.writePtr].timestamp.sec = buf.timestamp.tv_sec - start_time.tv_sec;
-            incomingBuffer.data[incomingBuffer.writePtr].timestamp.msec = (buf.timestamp.tv_usec - start_time.tv_usec);
+            timersub(&buf.timestamp, &start_time, &incomingBuffer.data[incomingBuffer.writePtr].timestamp);
 
             save_cnt++;
 

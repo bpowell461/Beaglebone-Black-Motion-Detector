@@ -2,7 +2,7 @@
 CC := gcc
 LDFLAGS := -lrt -pthread
 INCLUDES := $(shell find . -type f -name '*.h' -exec dirname {} \; | sort -u | sed 's/^/-I/')
-CFLAGS := -O2 -march=armv7-a -mtune=cortex-a8 -mfpu=neon -ftree-vectorize -ffast-math -DBEAGLEBONE -DDEBUG
+CFLAGS := -O2 -march=armv7-a -mtune=cortex-a8 -mfpu=neon -ftree-vectorize -ffast-math -fno-omit-frame-pointer -std=gnu99 -fexceptions -DBEAGLEBONE -DDEBUG
 
 # Target executable name
 TARGET := synchronome
