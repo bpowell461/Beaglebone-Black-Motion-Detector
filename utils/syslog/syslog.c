@@ -144,7 +144,7 @@ void syslog_trace(const char *msg, ...)
     
         snprintf(date, sizeof(month) + sizeof(day) + sizeof(ti) + NULL_TERM_SIZE, "%s %s %s", month, day, ti);
 
-        char fmt[] = "%s %s [COURSE:%i][ASSIGNMENT:%i]: ";
+        char fmt[] = "%s %s: [COURSE #:%i][Final Project] ";
         _printFunc(fmt, date, platform, course_num, assignment_num);
 
         /* Retrieving varargs list for use with printf */
