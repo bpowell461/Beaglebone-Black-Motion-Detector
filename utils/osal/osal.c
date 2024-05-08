@@ -18,7 +18,7 @@
 
 #define MAX_TASKS 4
 
-#define TIMER_TICK_MS (100U)
+#define TIMER_TICK_MS (11U)
 
 typedef struct
 {
@@ -49,6 +49,7 @@ typedef struct
 
 static BOOL_T os_initialized = DEF_FALSE;
 static BOOL_T scheduler_started = DEF_FALSE;
+static BOOL_T sequencerCallbackAssigned = DEF_FALSE;
 
 static osal_task_tcb_t osal_task_tcb[MAX_TASKS];
 static osal_sequencer_t osal_task_sequencers[MAX_TASKS];
@@ -72,6 +73,8 @@ static void osal_signal_handler_dispatcher(const INT32 signal);
 static void *osal_signal_handler_task(void *threadp);
 static void osal_task_generic_sequencer(void);
 static sys_result_e osal_create_scheduler(void);
+
+static unsigned long long tick = 0;
 
 sys_result_e osal_init(void)
 {
@@ -100,7 +103,7 @@ sys_result_e osal_init(void)
         osal_task_sequencers[i].task_state = TASKSTATE_UNUSED;
     }
 
-    rc = timer_create(CLOCK_REALTIME, NULL, &osal_task_timer);
+    rc = timer_create(CLOCK_MONOTONIC, NULL, &osal_task_timer);
     if (IS_ERROR(rc))
     {
         return SYS_FAILURE;
@@ -482,11 +485,15 @@ sys_result_e osal_start_scheduler(void)
     itval.it_value.tv_sec = 0;
     itval.it_value.tv_nsec = (TIMER_TICK_MS * USEC_PER_MSEC * NSEC_PER_USEC);
 
-    action.sa_handler = osal_signal_handler_dispatcher;
+    if (!sequencerCallbackAssigned)
+    {
+        action.sa_handler = osal_signal_handler_dispatcher;
+        sigemptyset(&action.sa_mask);
+        action.sa_flags = 0;
+        sigaction(SIGALRM, &action, NULL);
 
-    sigemptyset(&action.sa_mask);
-    action.sa_flags = 0;
-    sigaction(SIGALRM, &action, NULL);
+        sequencerCallbackAssigned = DEF_TRUE;
+    }
 
     ret = timer_settime(osal_task_timer, 0, &itval, &oitval);
 
@@ -577,6 +584,7 @@ cleanup:
 static void osal_signal_handler_dispatcher(const INT32 signal)
 {
     osal_sem_signal(&os_sched_sem);
+    tick++;
 }
 
 static void* osal_signal_handler_task(void* threadp)
@@ -592,8 +600,6 @@ static void* osal_signal_handler_task(void* threadp)
 
 static inline void osal_task_generic_sequencer(void)
 {
-    static unsigned long long tick = 0;
-    osal_mutex_lock(&os_sched_mutex);
     for (UINT32 i = 0; i < MAX_TASKS; i++)
     {
         if (osal_task_sequencers[i].task_state != TASKSTATE_UNUSED && osal_task_sequencers[i].period_cnts != 0)
@@ -604,6 +610,4 @@ static inline void osal_task_generic_sequencer(void)
             }
         }
     }
-    osal_mutex_unlock(&os_sched_mutex);
-    tick++;
 }

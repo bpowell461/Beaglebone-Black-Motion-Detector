@@ -5,7 +5,19 @@
 #include "utils.h"
 
 #define CAMERA_USE_PPM
-#define SAVED_FRAMES_MAX    10
+#define CAMERA_ACQUISITION_10HZ
+
+#define MAX_IGNORE_FRAMES (100u)
+
+#if defined(CAMERA_ACQUISITION_1HZ)
+#define OVERSAMPLE_FRAME 30
+#define SAVED_FRAMES_MAX    181
+#elif defined(CAMERA_ACQUISITION_10HZ)
+#define OVERSAMPLE_FRAME 2
+#define SAVED_FRAMES_MAX    1801
+#else
+#error "No acquisition mode defined"
+#endif
 
 #if defined(CAMERA_USE_YUV)
 #define PIXEL_FORMAT_CAMERA (V4L2_PIX_FMT_YUYV)
@@ -38,7 +50,7 @@
 #endif
 
 #define IMAGE_FILE(x) (x IMAGE_EXT)
-#define IMAGE_HEADER ("P6\n# RESERVED\n"STR(PIXEL_WIDTH)" "STR(PIXEL_HEIGHT)"\n255\n")
+#define IMAGE_HEADER ("P6\n# %s\n# Timestamp: %ld.%ld \n"STR(PIXEL_WIDTH)" "STR(PIXEL_HEIGHT)"\n255\n")
 #define RGB_FRAME_SIZE_BYTES (PIXEL_WIDTH * PIXEL_HEIGHT * 3)
 
 /* Custom Image Formats */
@@ -47,12 +59,14 @@
 /* This is the "raw" frame size */
 typedef struct
 {
+    struct timeval timestamp;
     UINT08 bytes[FRAME_SIZE];
 }frame_t;
 
 /* Modified frame size using RGB888 */
 typedef struct
 {
+    struct timeval timestamp;
     UINT08 bytes[RGB_FRAME_SIZE_BYTES];
 }rgb_frame_t;
 

@@ -18,9 +18,9 @@
 ringbuffer_typedef(frame_t, rawImageBuffer_t);
 
 static rawImageBuffer_t incomingBuffer;
+static struct timeval start_time;
 
-#define NUM_FRAME_BUFS 4
-#define OVERSAMPLE_FRAME 2 
+#define NUM_FRAME_BUFS 32
 
 struct buffer {
     UINT08 *start;
@@ -30,8 +30,8 @@ struct buffer {
 static struct buffer buffers[NUM_FRAME_BUFS];
 
 static INT32 framebuffer_fd;
-
-static struct timeval select_timeout;
+static UINT32 frame_cnt = 0;
+static UINT32 save_cnt = 0;
 
 static sys_result_e framebuffer_ioctl(INT32 fd, UINT32 request, void *arg);
 static UINT32       framebuffer_requestbuffers(UINT08 count);
@@ -52,10 +52,7 @@ sys_result_e framebuffer_init(INT32 *fd)
         buffers[i].size = framebuffer_mapbuffers(i, &buffers[i].start);
     }
 
-    ringbuffer_init(incomingBuffer, frame_t, 16);
-
-    select_timeout.tv_sec = 0;
-    select_timeout.tv_usec = (900 * USEC_PER_MSEC);
+    ringbuffer_init(incomingBuffer, frame_t, 128);
 
     framebuffer_initframebuffers(framebuffer_fd);
 
@@ -117,40 +114,64 @@ sys_result_e framebuffer_initframebuffers(INT32 fd)
 sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
 {
     fd_set fds;
-    sys_result_e ret;
     struct v4l2_buffer buf = { 0 };
 
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
 
-    for (UINT08 i = 0; i < NUM_FRAME_BUFS; i++)
+    BOOL_T writeCondition = saveFrame && (frame_cnt % OVERSAMPLE_FRAME == 0);
+
+    FD_ZERO(&fds);
+    FD_SET(fd, &fds);
+    int r = select(fd + 1, &fds, NULL, NULL, 0);
+    if (-1 == r) {
+        return SYS_IGNORE;
+    }
+    
+    if (SYS_SUCCESS != framebuffer_dequeueframe(&buf))
     {
-        FD_ZERO(&fds);
-        FD_SET(fd, &fds);
-        int r = select(fd + 1, &fds, NULL, NULL, 0);
-        if (-1 == r) {
-            return SYS_IGNORE;
-        }
-
-        ret = framebuffer_dequeueframe(&buf);
-        if (SYS_SUCCESS != ret)
-        {
-            continue;
-        }
-
-        if (SYS_SUCCESS == ret && saveFrame && (i == OVERSAMPLE_FRAME))
-        {
-            if (!ringbuffer_isFull(&incomingBuffer))
-            {
-                memcpy(incomingBuffer.data[incomingBuffer.writePtr].bytes, buffers[buf.index].start, buffers[buf.index].size);
-                ringbuffer_inc_writeptr(&incomingBuffer);
-            }
-        }
-
-        ret = framebuffer_queueframe(&buf);
+        return SYS_FAILURE;
     }
 
-    return ret;
+    if (writeCondition)
+    {
+        if (!ringbuffer_isFull(&incomingBuffer))
+        {
+            if (!save_cnt)
+            {
+                start_time = buf.timestamp;
+            }
+
+            ringbuffer_memcpy(incomingBuffer.data[incomingBuffer.writePtr].bytes, buffers[buf.index].start, buf.bytesused);
+
+            timersub(&buf.timestamp, &start_time, &incomingBuffer.data[incomingBuffer.writePtr].timestamp);
+
+            save_cnt++;
+
+            ringbuffer_inc_writeptr(&incomingBuffer);
+        }
+        else
+        {
+            SYS_TRACE("ERR: Framebuffer full");
+        }
+    }
+
+    if (SYS_SUCCESS != framebuffer_queueframe(&buf))
+    {
+        return SYS_FAILURE;
+    }
+
+    if(saveFrame)
+        frame_cnt++;
+
+    if (writeCondition)
+    {
+        return SYS_SUCCESS;
+    }
+    else
+    {
+        return SYS_IGNORE;
+    }
 }
 
 sys_result_e framebuffer_deinit(void)
@@ -164,12 +185,19 @@ sys_result_e framebuffer_deinit(void)
 
 static sys_result_e framebuffer_ioctl(INT32 fd, UINT32 request, void *arg)
 {
-    if (-1 == ioctl(fd, request, arg))
+    INT32 ret = ioctl(fd, request, arg);
+    if (EAGAIN == ret || EPIPE == ret)
+    {
+        return SYS_IGNORE;
+    }
+    else if (0 == ret)
+    {
+        return SYS_SUCCESS;
+    }
+    else
     {
         return SYS_FAILURE;
     }
-
-    return SYS_SUCCESS;
 }
 
 static UINT32 framebuffer_requestbuffers(UINT08 count)
@@ -227,11 +255,11 @@ static sys_result_e framebuffer_queueframe(struct v4l2_buffer *bufd)
 
 static sys_result_e framebuffer_dequeueframe(struct v4l2_buffer *buf)
 {
-    if (SYS_SUCCESS != framebuffer_ioctl(framebuffer_fd, VIDIOC_DQBUF, buf))
+    sys_result_e ret = framebuffer_ioctl(framebuffer_fd, VIDIOC_DQBUF, buf);
+    if (SYS_FAILURE == ret)
     {
         SYS_TRACE("ERR: FRAMEBUFFER DQBUF");
-        return SYS_FAILURE;
     }
 
-    return SYS_SUCCESS;
+    return ret;
 }

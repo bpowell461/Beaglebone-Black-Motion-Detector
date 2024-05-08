@@ -16,8 +16,6 @@
 #include "camera_cfg.h"
 
 /** Macros **/
-#define MAX_WRITE_ERRORS (5u)
-#define MAX_IGNORE_FRAMES (8u)
 
 /** Type Definitions **/
 typedef enum
@@ -29,6 +27,14 @@ typedef enum
 
 typedef enum
 {
+    eSTATE_ADJUSTING,
+    eSTATE_CAPTURING,
+    eSTATE_EXIT,
+    eSTATE_COUNT
+}camera_fsm_e;
+
+typedef enum
+{
     IO_METHOD_READ,
     IO_METHOD_MMAP,
     IO_METHOD_USERPTR
@@ -36,8 +42,8 @@ typedef enum
 
 /** Static Variables **/
 static INT32 camera_fd;
-static UINT08 num_writes = 0;
-static UINT08 ignoreFrames = 0;
+static UINT32 num_writes = 0;
+static UINT32 ignoreFrames = 0;
 
 static char *dev_name = "/dev/video0";
 
@@ -52,6 +58,8 @@ void camera_init(INT32 *fd)
 {
     /* V4L2 Format Vars */
     struct v4l2_format  fmt;
+    struct v4l2_control ctrl;
+    struct v4l2_streamparm streamparm;
     struct v4l2_capability cap;
     v4l2_io_e io = IO_METHOD_MMAP;
 
@@ -99,25 +107,36 @@ void camera_init(INT32 *fd)
     }
 
     if ((fmt.fmt.pix.width != PIXEL_WIDTH) || (fmt.fmt.pix.height != PIXEL_HEIGHT))
-        SYS_TRACE("WARN: driver is sending image at %dx%d\n", fmt.fmt.pix.width, fmt.fmt.pix.height);
-
-    struct v4l2_streamparm streamparm;
-    memset(&streamparm, 0, sizeof(streamparm));
-    streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    if (SYS_SUCCESS != camera_ioctl(camera_fd, VIDIOC_G_PARM, &streamparm))
     {
-        SYS_TRACE("ERR: Getting VIDIOC parameters");
+        SYS_TRACE("ERR: driver is sending image at %dx%d\n", fmt.fmt.pix.width, fmt.fmt.pix.height);
         exit(EXIT_FAILURE);
     }
 
-    streamparm.parm.capture.capturemode |= V4L2_CAP_TIMEPERFRAME;
+    /* Setting camera framerate */
+    CLEAR(streamparm);
+
+    streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     streamparm.parm.capture.timeperframe.numerator = 1;
     streamparm.parm.capture.timeperframe.denominator = 30;
-    if (SYS_SUCCESS != camera_ioctl(camera_fd, VIDIOC_S_PARM, &streamparm))
-    {
-        SYS_TRACE("ERR: Setting VIDIOC parameters");
-        exit(EXIT_FAILURE);
-    }
+
+    camera_ioctl(camera_fd, VIDIOC_S_PARM, &streamparm);
+    camera_ioctl(camera_fd, VIDIOC_G_PARM, &streamparm);
+    SYS_TRACE("Camera framerate: %u FPS", streamparm.parm.capture.timeperframe.denominator);
+
+    /* Setting camera control */
+    CLEAR(ctrl);
+
+    ctrl.id = V4L2_CID_EXPOSURE_ABSOLUTE;
+    ctrl.value = V4L2_EXPOSURE_MANUAL;
+    camera_ioctl(camera_fd, VIDIOC_S_CTRL, &ctrl);
+
+    ctrl.id = V4L2_CID_FOCUS_AUTO;
+    ctrl.value = DEF_FALSE;
+    camera_ioctl(camera_fd, VIDIOC_S_CTRL, &ctrl);
+
+    ctrl.id = V4L2_CID_FOCUS_ABSOLUTE;
+    ctrl.value = 0;
+    camera_ioctl(camera_fd, VIDIOC_S_CTRL, &ctrl);
 
     *fd = camera_fd;
 
@@ -125,6 +144,7 @@ void camera_init(INT32 *fd)
 
 void *camera_task(void *threadp)
 {
+    camera_fsm_e state = eSTATE_ADJUSTING;
     osal_task_start_args_t args = *(osal_task_start_args_t *)threadp;
 
     osal_id_t id = args.task_id;
@@ -137,32 +157,49 @@ void *camera_task(void *threadp)
 
     while(DEF_TRUE)
     {
-        BOOL_T saveFrame = ignoreFrames >= MAX_IGNORE_FRAMES;
-        if (SAVED_FRAMES_MAX <= num_writes)
+        switch (state)
         {
-            break;
-        }
-
-        if (SYS_SUCCESS == framebuffer_writeframe(camera_fd, saveFrame))
-        {
-            if (saveFrame)
+            case eSTATE_ADJUSTING:
             {
-                SYS_TRACE("Writing frame");
-                num_writes++;
-            }                
-            else
+                if (SYS_FAILURE != framebuffer_writeframe(camera_fd, DEF_FALSE))
+                {
+                    ignoreFrames++;
+                }
+                if (ignoreFrames >= MAX_IGNORE_FRAMES)
+                {
+                    state = eSTATE_CAPTURING;
+                }
+                break;
+            }
+            case eSTATE_CAPTURING:
             {
-                SYS_TRACE("Ignore frame");
-                ignoreFrames++;
-            }   
+                osal_stop_scheduler();
+                if (SYS_SUCCESS == framebuffer_writeframe(camera_fd, DEF_TRUE))
+                {
+                    num_writes++;
+                }
+                if (SAVED_FRAMES_MAX <= num_writes)
+                {
+                    state = eSTATE_EXIT;
+                }
+                osal_start_scheduler();
+                break;
+            }
+            case eSTATE_EXIT:
+            {
+                SYS_TRACE("Camera Task Exiting...");
+                camera_capturestate(eCAMERA_OFF);
+                osal_task_delete(id, DEF_FALSE);
+                break;
+            }
+            default:
+            {
+                state = eSTATE_EXIT;
+                break;
+            }
         }
-
         osal_task_delay(id);
     }
-
-    SYS_TRACE("Camera Task Exiting...");
-    camera_capturestate(eCAMERA_OFF);
-    osal_task_delete(id, DEF_FALSE);
 
     return NULL;
 }

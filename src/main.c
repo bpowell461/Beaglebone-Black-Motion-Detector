@@ -6,12 +6,13 @@
 #include "nvm.h"
 #include "framebuffer.h"
 #include "transcoder.h"
+#include <stdlib.h>
 
 #define NUM_THREADS 2
 
 #define ASSIGNMENT 1
-#define COURSE 3
-#define NAME "capture"
+#define COURSE 4
+#define NAME "Final Project"
 
 #ifdef SIMPLE_TASKS
 static void *HelloDog_Task(void *threadp);
@@ -39,25 +40,28 @@ int main(void)
     nvm_init(&v4l_fd);
     transcoder_init(&v4l_fd);
 
-    osal_priority_t prio = 90;
+    osal_priority_t prio = 97;
     osal_id_t camera_id;
-    if (SYS_SUCCESS != osal_task_create(&camera_id, "camera", 0, prio, camera_task, TASK_RATE_10HZ, NULL))
+    if (SYS_SUCCESS != osal_task_create(&camera_id, "camera", 0, prio, camera_task, TASK_RATE_30HZ, NULL))
     {
         SYS_TRACE("ERR: CAMERA TASK CREATE");
-    }
-
-    prio = 85;
-    osal_id_t transcoder_id;
-    if (SYS_SUCCESS != osal_task_create(&transcoder_id, "transcoder", 0, prio, transcoder_task, (2 * TASK_RATE_10HZ), NULL))
-    {
-        SYS_TRACE("ERR: NVM TASK CREATE");
+        exit(EXIT_FAILURE);
     }
 
     prio = 80;
-    osal_id_t nvm_id;
-    if (SYS_SUCCESS != osal_task_create(&nvm_id, "nvm", 0, prio, nvm_task, (3 * TASK_RATE_10HZ), NULL))
+    osal_id_t transcoder_id;
+    if (SYS_SUCCESS != osal_task_create(&transcoder_id, "transcoder", 0, prio, transcoder_task, (2 * TASK_RATE_30HZ), NULL))
     {
         SYS_TRACE("ERR: NVM TASK CREATE");
+        exit(EXIT_FAILURE);
+    }
+
+    prio = 75;
+    osal_id_t nvm_id;
+    if (SYS_SUCCESS != osal_task_create(&nvm_id, "nvm", 0, prio, nvm_task, (2 * TASK_RATE_30HZ), NULL))
+    {
+        SYS_TRACE("ERR: NVM TASK CREATE");
+        exit(EXIT_FAILURE);
     }
 
 #else
