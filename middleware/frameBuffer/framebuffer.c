@@ -23,31 +23,31 @@ static struct timeval start_time;
 #define NUM_FRAME_BUFS 32
 
 struct buffer {
-    UINT08 *start;
+    uint8_t *start;
     size_t size;
 };
 
 static struct buffer buffers[NUM_FRAME_BUFS];
 
-static INT32 framebuffer_fd;
-static UINT32 frame_cnt = 0;
-static UINT32 save_cnt = 0;
+static int framebuffer_fd;
+static uint32_t frame_cnt = 0;
+static uint32_t save_cnt = 0;
 
-static sys_result_e framebuffer_ioctl(INT32 fd, UINT32 request, void *arg);
-static UINT32       framebuffer_requestbuffers(UINT08 count);
-static UINT32       framebuffer_mapbuffers(UINT08 idx, UINT08 **bufferPtr);
+static sys_result_e framebuffer_ioctl(int fd, uint32_t request, void *arg);
+static uint32_t       framebuffer_requestbuffers(uint8_t count);
+static uint32_t       framebuffer_mapbuffers(uint8_t idx, uint8_t **bufferPtr);
 static sys_result_e       framebuffer_queueframe(struct v4l2_buffer *buf);
 static sys_result_e framebuffer_dequeueframe(struct v4l2_buffer *buf);
 
-sys_result_e framebuffer_init(INT32 *fd)
+sys_result_e framebuffer_init(int *fd)
 {
-    UINT32 bufCount = 0;
+    uint32_t bufCount = 0;
 
     framebuffer_fd = *fd;
 
     bufCount = framebuffer_requestbuffers(NUM_FRAME_BUFS);
 
-    for (UINT08 i = 0; i < bufCount; i++) 
+    for (uint8_t i = 0; i < bufCount; i++) 
     {
         buffers[i].size = framebuffer_mapbuffers(i, &buffers[i].start);
     }
@@ -59,7 +59,7 @@ sys_result_e framebuffer_init(INT32 *fd)
     return SYS_SUCCESS;
 }
 
-sys_result_e framebuffer_getframe(INT32 fd, frame_t *frame)
+sys_result_e framebuffer_getframe(int fd, frame_t *frame)
 {
     if (ringbuffer_isEmpty(&incomingBuffer))
     {
@@ -71,7 +71,7 @@ sys_result_e framebuffer_getframe(INT32 fd, frame_t *frame)
     return SYS_SUCCESS;
 }
 
-sys_result_e framebuffer_getframe_ptr(INT32 fd, frame_t **frame)
+sys_result_e framebuffer_getframe_ptr(int fd, frame_t **frame)
 {
     if (ringbuffer_isEmpty(&incomingBuffer))
     {
@@ -83,7 +83,7 @@ sys_result_e framebuffer_getframe_ptr(INT32 fd, frame_t **frame)
     return SYS_SUCCESS;
 }
 
-sys_result_e framebuffer_freeframe(INT32 fd, frame_t *frame)
+sys_result_e framebuffer_freeframe(int fd, frame_t *frame)
 {
     if (ringbuffer_isEmpty(&incomingBuffer))
     {
@@ -95,11 +95,11 @@ sys_result_e framebuffer_freeframe(INT32 fd, frame_t *frame)
     return SYS_SUCCESS;
 }
 
-sys_result_e framebuffer_initframebuffers(INT32 fd)
+sys_result_e framebuffer_initframebuffers(int fd)
 {
     struct v4l2_buffer bufd = { 0 };
 
-    for (UINT08 i = 0; i < NUM_FRAME_BUFS; i++)
+    for (uint8_t i = 0; i < NUM_FRAME_BUFS; i++)
     {
         CLEAR(bufd);
         bufd.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -111,7 +111,7 @@ sys_result_e framebuffer_initframebuffers(INT32 fd)
     return SYS_SUCCESS;
 }
 
-sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
+sys_result_e framebuffer_writeframe(int fd, uint8_t saveFrame)
 {
     fd_set fds;
     struct v4l2_buffer buf = { 0 };
@@ -119,7 +119,7 @@ sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
 
-    BOOL_T writeCondition = saveFrame && (frame_cnt % OVERSAMPLE_FRAME == 0);
+    uint8_t writeCondition = saveFrame && (frame_cnt % OVERSAMPLE_FRAME == 0);
 
     FD_ZERO(&fds);
     FD_SET(fd, &fds);
@@ -177,15 +177,15 @@ sys_result_e framebuffer_writeframe(INT32 fd, BOOL_T saveFrame)
 sys_result_e framebuffer_deinit(void)
 {
     close(framebuffer_fd);
-    for (UINT32 i = 0; i < NUM_FRAME_BUFS; ++i)
+    for (uint32_t i = 0; i < NUM_FRAME_BUFS; ++i)
         munmap(buffers[i].start, buffers[i].size);
 
     return SYS_SUCCESS;
 }
 
-static sys_result_e framebuffer_ioctl(INT32 fd, UINT32 request, void *arg)
+static sys_result_e framebuffer_ioctl(int fd, uint32_t request, void *arg)
 {
-    INT32 ret = ioctl(fd, request, arg);
+    int ret = ioctl(fd, request, arg);
     if (EAGAIN == ret || EPIPE == ret)
     {
         return SYS_IGNORE;
@@ -200,7 +200,7 @@ static sys_result_e framebuffer_ioctl(INT32 fd, UINT32 request, void *arg)
     }
 }
 
-static UINT32 framebuffer_requestbuffers(UINT08 count)
+static uint32_t framebuffer_requestbuffers(uint8_t count)
 {
     /* V4L2 Buffer Vars */
     struct v4l2_requestbuffers req = { 0 };
@@ -224,7 +224,7 @@ static UINT32 framebuffer_requestbuffers(UINT08 count)
     return req.count;
 }
 
-static UINT32 framebuffer_mapbuffers(UINT08 idx, UINT08 **bufferPtr)
+static uint32_t framebuffer_mapbuffers(uint8_t idx, uint8_t **bufferPtr)
 {
     struct v4l2_buffer buf = { 0 };
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -237,7 +237,7 @@ static UINT32 framebuffer_mapbuffers(UINT08 idx, UINT08 **bufferPtr)
         exit(1);
     }
 
-    *bufferPtr = (UINT08 *)mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, framebuffer_fd, (off_t)buf.m.offset);
+    *bufferPtr = (uint8_t *)mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, framebuffer_fd, (off_t)buf.m.offset);
 
     return buf.length;
 }

@@ -17,9 +17,9 @@
 #define ringbuffer_typedef(TYPE, NAME) \
     typedef struct { \
         TYPE        *data;\
-        UINT32      size; \
-        UINT32      readPtr; \
-        UINT32      writePtr; \
+        uint32_t      size; \
+        uint32_t      readPtr; \
+        uint32_t      writePtr; \
     } NAME
 
 typedef enum

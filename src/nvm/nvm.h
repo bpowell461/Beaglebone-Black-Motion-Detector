@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-void nvm_init(INT32 *fd);
+void nvm_init(int *fd);
 void *nvm_task(void *threadp);
 
 #endif

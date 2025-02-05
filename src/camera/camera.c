@@ -41,9 +41,9 @@ typedef enum
 }v4l2_io_e;
 
 /** Static Variables **/
-static INT32 camera_fd;
-static UINT32 num_writes = 0;
-static UINT32 ignoreFrames = 0;
+static int camera_fd;
+static uint32_t num_writes = 0;
+static uint32_t ignoreFrames = 0;
 
 static char *dev_name = "/dev/video0";
 
@@ -51,10 +51,10 @@ static char *dev_name = "/dev/video0";
 
 /** Internal Function Prototypes **/
 static sys_result_e camera_capturestate(camera_state_e state);
-static sys_result_e camera_ioctl(INT32 fh, UINT32 request, void *arg);
+static sys_result_e camera_ioctl(int fh, uint32_t request, void *arg);
 
 
-void camera_init(INT32 *fd)
+void camera_init(int *fd)
 {
     /* V4L2 Format Vars */
     struct v4l2_format  fmt;
@@ -131,7 +131,7 @@ void camera_init(INT32 *fd)
     camera_ioctl(camera_fd, VIDIOC_S_CTRL, &ctrl);
 
     ctrl.id = V4L2_CID_FOCUS_AUTO;
-    ctrl.value = DEF_FALSE;
+    ctrl.value = false;
     camera_ioctl(camera_fd, VIDIOC_S_CTRL, &ctrl);
 
     ctrl.id = V4L2_CID_FOCUS_ABSOLUTE;
@@ -155,13 +155,13 @@ void *camera_task(void *threadp)
 
     camera_capturestate(eCAMERA_ON);
 
-    while(DEF_TRUE)
+    while(true)
     {
         switch (state)
         {
             case eSTATE_ADJUSTING:
             {
-                if (SYS_FAILURE != framebuffer_writeframe(camera_fd, DEF_FALSE))
+                if (SYS_FAILURE != framebuffer_writeframe(camera_fd, false))
                 {
                     ignoreFrames++;
                 }
@@ -174,7 +174,7 @@ void *camera_task(void *threadp)
             case eSTATE_CAPTURING:
             {
                 osal_stop_scheduler();
-                if (SYS_SUCCESS == framebuffer_writeframe(camera_fd, DEF_TRUE))
+                if (SYS_SUCCESS == framebuffer_writeframe(camera_fd, true))
                 {
                     num_writes++;
                 }
@@ -189,7 +189,7 @@ void *camera_task(void *threadp)
             {
                 SYS_TRACE("Camera Task Exiting...");
                 camera_capturestate(eCAMERA_OFF);
-                osal_task_delete(id, DEF_FALSE);
+                osal_task_delete(id, false);
                 break;
             }
             default:
@@ -206,8 +206,8 @@ void *camera_task(void *threadp)
 
 static sys_result_e camera_capturestate(camera_state_e state)
 {
-    INT32 res;
-    UINT32 type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    int res;
+    uint32_t type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
     if (eCAMERA_ON == state)
     {
@@ -227,7 +227,7 @@ static sys_result_e camera_capturestate(camera_state_e state)
     return res;
 }
 
-static sys_result_e camera_ioctl(INT32 fh, UINT32 request, void *arg)
+static sys_result_e camera_ioctl(int fh, uint32_t request, void *arg)
 {
     if (-1 == ioctl(fh, request, arg))
     {

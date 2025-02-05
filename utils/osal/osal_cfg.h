@@ -21,12 +21,12 @@ typedef sem_t               osal_sem_t;
 typedef pthread_t           osal_task_t;
 
 /* Configuration Types */
-typedef UINT08 osal_id_t;
-typedef UINT16 osal_stack_t;
+typedef uint8_t osal_id_t;
+typedef uint16_t osal_stack_t;
 
 typedef void *(*osal_func)(void *);
 
-typedef UINT08 osal_priority_t;
+typedef uint8_t osal_priority_t;
 
 typedef struct
 {

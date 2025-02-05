@@ -18,11 +18,11 @@ sys_result_e osal_init(void);
 
 sys_result_e osal_deinit(void);
 
-sys_result_e osal_task_create(osal_id_t *id, char *name, osal_stack_t stack, osal_priority_t priority, osal_func task_func, UINT32 period_ms, void *args);
+sys_result_e osal_task_create(osal_id_t *id, char *name, osal_stack_t stack, osal_priority_t priority, osal_func task_func, uint32_t period_ms, void *args);
 
 sys_result_e osal_task_start(osal_id_t id);
 
-sys_result_e osal_task_delete(osal_id_t id, BOOL_T force);
+sys_result_e osal_task_delete(osal_id_t id, uint8_t force);
 
 sys_result_e osal_task_suspend(osal_id_t id);
 
@@ -46,11 +46,11 @@ void osal_task_wait_start(osal_id_t id);
 
 void osal_task_delay(osal_id_t id);
 
-void osal_task_delay_period(osal_id_t id, UINT32 period_ms);
+void osal_task_delay_period(osal_id_t id, uint32_t period_ms);
 
-void osal_task_set_period(osal_id_t id, UINT32 period_ms);
+void osal_task_set_period(osal_id_t id, uint32_t period_ms);
 
-UINT32 osal_task_wait_all(void);
+uint32_t osal_task_wait_all(void);
 
 sys_result_e osal_task_wait(osal_id_t id);
 

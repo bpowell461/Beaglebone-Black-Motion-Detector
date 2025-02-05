@@ -11,14 +11,14 @@
 /** Type Definitions **/
 
 /** Static Variables **/
-static INT32 nvm_fd;
-static BOOL_T exit_task = DEF_FALSE;
+static int nvm_fd;
+static uint8_t exit_task = false;
 
 /** Global Variables **/
 
 /** Internal Function Prototypes **/
 
-void nvm_init(INT32 *fd)
+void nvm_init(int *fd)
 {
     nvm_fd = *fd;
     imagebuffer_init();
@@ -30,15 +30,15 @@ void *nvm_task(void *threadp)
 
     osal_id_t id = args.task_id;
 
-    rgb_frame_t *save_frame = DEF_NULL_PTR;
+    rgb_frame_t *save_frame = NULL;
 
     SYS_TRACE("NVM Task (ID: %u) Waiting for Start...", id);
 
     osal_task_wait_start(id);
 
-    while(DEF_TRUE)
+    while(true)
     {
-        for (UINT08 i = 0; i < 2; i ++)
+        for (uint8_t i = 0; i < 2; i ++)
         {
             if (SYS_SUCCESS == imagebuffer_startread(&save_frame))
             {
@@ -53,7 +53,7 @@ void *nvm_task(void *threadp)
 
                 if (image_getsavedframes() >= SAVED_FRAMES_MAX)
                 {
-                    exit_task = DEF_TRUE;
+                    exit_task = true;
                     break;
                 }
             }
@@ -72,7 +72,7 @@ void *nvm_task(void *threadp)
 
     SYS_TRACE("NVM Task Exiting...");
 
-    osal_task_delete(id, DEF_FALSE);
+    osal_task_delete(id, false);
 
     return NULL;
 } 

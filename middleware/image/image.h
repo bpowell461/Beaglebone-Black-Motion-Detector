@@ -8,8 +8,8 @@ sys_result_e imagebuffer_init(void);
 sys_result_e imagebuffer_startread(rgb_frame_t **frame);
 sys_result_e imagebuffer_endread(void);
 sys_result_e imagebuffer_write(rgb_frame_t *frame);
-sys_result_e image_convert(UINT32 srcFmt, UINT32 destFmt, const UINT08 *src_frame, UINT08 *dest_frame);
-sys_result_e image_save(const rgb_frame_t *buf, const UINT32 size);
-UINT32       image_getsavedframes(void);
+sys_result_e image_convert(uint32_t srcFmt, uint32_t destFmt, const uint8_t *src_frame, uint8_t *dest_frame);
+sys_result_e image_save(const rgb_frame_t *buf, const uint32_t size);
+uint32_t       image_getsavedframes(void);
 
 #endif // !IMAGE_H_

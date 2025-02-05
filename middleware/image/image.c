@@ -21,24 +21,24 @@ typedef struct
 }buffer_mtx_handle_t;
 
 static rgbImageBuffer_t imageBuffer;
-static UINT32 frameIdx = 0;
+static uint32_t frameIdx = 0;
 
-static BOOL_T imagebuffer_initialized = DEF_FALSE;
+static uint8_t imagebuffer_initialized = false;
 
-static void yuv2rgb(INT32 y, INT32 u, INT32 v, UINT08 *r, UINT08 *g, UINT08 *b);
-static sys_result_e rgb888_convert(UINT32 srcFmt, const UINT08 *src_frame, UINT08 *dest_frame);
-static INT32 file_write_blocking(INT32 fd, const rgb_frame_t *buf, size_t size);
+static void yuv2rgb(int y, int u, int v, uint8_t *r, uint8_t *g, uint8_t *b);
+static sys_result_e rgb888_convert(uint32_t srcFmt, const uint8_t *src_frame, uint8_t *dest_frame);
+static int file_write_blocking(int fd, const rgb_frame_t *buf, size_t size);
 
 /* COLOR LUTS */
 
-static const INT32 PRECISION      = (INT32)(32768);
-static const INT32 COEFFICIENT_Y  = (INT32)(1.164f * (float)PRECISION + 0.5f);
-static const INT32 COEFFICIENT_RV = (INT32)(1.596f * (float)PRECISION + 0.5f);
-static const INT32 COEFFICIENT_GU = (INT32)(0.391f * (float)PRECISION + 0.5f);
-static const INT32 COEFFICIENT_GV = (INT32)(0.813f * (float)PRECISION + 0.5f);
-static const INT32 COEFFICIENT_BU = (INT32)(2.018f * (float)PRECISION + 0.5f);
+static const int PRECISION      = (int)(32768);
+static const int COEFFICIENT_Y  = (int)(1.164f * (float)PRECISION + 0.5f);
+static const int COEFFICIENT_RV = (int)(1.596f * (float)PRECISION + 0.5f);
+static const int COEFFICIENT_GU = (int)(0.391f * (float)PRECISION + 0.5f);
+static const int COEFFICIENT_GV = (int)(0.813f * (float)PRECISION + 0.5f);
+static const int COEFFICIENT_BU = (int)(2.018f * (float)PRECISION + 0.5f);
 
-static const INT32 CoeffecientsGU[256] = {
+static const int CoeffecientsGU[256] = {
     -COEFFICIENT_GU * (0 - 128),
     -COEFFICIENT_GU * (1 - 128),
     -COEFFICIENT_GU * (2 - 128),
@@ -297,7 +297,7 @@ static const INT32 CoeffecientsGU[256] = {
     -COEFFICIENT_GU * (255 - 128)
 };
 
-static const INT32 CoeffecientsGV[256] = {
+static const int CoeffecientsGV[256] = {
     -COEFFICIENT_GV * (0 - 128),
     -COEFFICIENT_GV * (1 - 128),
     -COEFFICIENT_GV * (2 - 128),
@@ -556,7 +556,7 @@ static const INT32 CoeffecientsGV[256] = {
     -COEFFICIENT_GV * (255 - 128)
 };
 
-static const INT32 CoeffecientsRV[256] = {
+static const int CoeffecientsRV[256] = {
     COEFFICIENT_RV * (0 - 128),
     COEFFICIENT_RV * (1 - 128),
     COEFFICIENT_RV * (2 - 128),
@@ -815,7 +815,7 @@ static const INT32 CoeffecientsRV[256] = {
     COEFFICIENT_RV * (255 - 128)
 };
 
-static const INT32 CoeffecientsBU[256] = {
+static const int CoeffecientsBU[256] = {
     COEFFICIENT_BU * (0 - 128),
     COEFFICIENT_BU * (1 - 128),
     COEFFICIENT_BU * (2 - 128),
@@ -1074,7 +1074,7 @@ static const INT32 CoeffecientsBU[256] = {
     COEFFICIENT_BU * (255 - 128)
 };
 
-static const INT32 CoefficientsY[256] =
+static const int CoefficientsY[256] =
 {
     COEFFICIENT_Y * (0 - 16) + (PRECISION / 2),
     COEFFICIENT_Y * (1 - 16) + (PRECISION / 2),
@@ -1394,7 +1394,7 @@ sys_result_e imagebuffer_write(rgb_frame_t *frame)
     return ret;
 }
 
-sys_result_e image_convert(UINT32 srcFmt, UINT32 destFmt, const UINT08 *src_frame, UINT08 *dest_frame)
+sys_result_e image_convert(uint32_t srcFmt, uint32_t destFmt, const uint8_t *src_frame, uint8_t *dest_frame)
 {
     if (srcFmt == destFmt)
     {
@@ -1416,11 +1416,11 @@ sys_result_e image_convert(UINT32 srcFmt, UINT32 destFmt, const UINT08 *src_fram
 
 }
 
-static sys_result_e rgb888_convert(UINT32 srcFmt, const UINT08 *src_frame, UINT08 *dest_frame)
+static sys_result_e rgb888_convert(uint32_t srcFmt, const uint8_t *src_frame, uint8_t *dest_frame)
 {
-    UINT32 i = 0;
-    UINT32 j = 0;
-    INT32 y_temp, y2_temp, u_temp, v_temp;
+    uint32_t i = 0;
+    uint32_t j = 0;
+    int y_temp, y2_temp, u_temp, v_temp;
     switch (srcFmt)
     {
         case V4L2_PIX_FMT_YUYV:
@@ -1428,10 +1428,10 @@ static sys_result_e rgb888_convert(UINT32 srcFmt, const UINT08 *src_frame, UINT0
             for (i = 0, j = 0; i < (FRAME_SIZE); i = i + 4, j = j + 6)
             {
                 /* Minor optimization with loop unrolling */
-                y_temp  = (INT32)src_frame[i + 0];
-                u_temp  = (INT32)src_frame[i + 1];
-                y2_temp = (INT32)src_frame[i + 2];
-                v_temp  = (INT32)src_frame[i + 3];
+                y_temp  = (int)src_frame[i + 0];
+                u_temp  = (int)src_frame[i + 1];
+                y2_temp = (int)src_frame[i + 2];
+                v_temp  = (int)src_frame[i + 3];
                 yuv2rgb(y_temp, u_temp, v_temp, &dest_frame[j], &dest_frame[j + 1], &dest_frame[j + 2]);
                 yuv2rgb(y2_temp, u_temp, v_temp, &dest_frame[j + 3], &dest_frame[j + 4], &dest_frame[j + 5]);
             }
@@ -1446,11 +1446,11 @@ static sys_result_e rgb888_convert(UINT32 srcFmt, const UINT08 *src_frame, UINT0
     return SYS_SUCCESS;
 }
 
-static inline void yuv2rgb(INT32 y, INT32 u, INT32 v, UINT08 *r, UINT08 *g, UINT08 *b)
+static inline void yuv2rgb(int y, int u, int v, uint8_t *r, uint8_t *g, uint8_t *b)
 {
-    INT32 RR = CoefficientsY[y] + CoeffecientsRV[v];
-    INT32 GG = CoefficientsY[y] + CoeffecientsGU[u] + CoeffecientsGV[v];
-    INT32 BB = CoefficientsY[y] + CoeffecientsBU[u];
+    int RR = CoefficientsY[y] + CoeffecientsRV[v];
+    int GG = CoefficientsY[y] + CoeffecientsGU[u] + CoeffecientsGV[v];
+    int BB = CoefficientsY[y] + CoeffecientsBU[u];
 
     RR /= PRECISION;
     GG /= PRECISION;
@@ -1468,18 +1468,18 @@ static inline void yuv2rgb(INT32 y, INT32 u, INT32 v, UINT08 *r, UINT08 *g, UINT
     CLAMP_LOWER(BB, 0);
 
 
-    *r = (UINT08) RR & 0xFFu;
-    *g = (UINT08) GG & 0xFFu;
-    *b = (UINT08) BB & 0xFFu;
+    *r = (uint8_t) RR & 0xFFu;
+    *g = (uint8_t) GG & 0xFFu;
+    *b = (uint8_t) BB & 0xFFu;
 }
 
-sys_result_e image_save(const rgb_frame_t *buf, const UINT32 size)
+sys_result_e image_save(const rgb_frame_t *buf, const uint32_t size)
 {
     char out_name[256];
-    INT32 ret;
+    int ret;
 
     sprintf(out_name, IMAGE_FILE("/media/card/pics/frame%04d"), frameIdx);
-    INT32 file = open(out_name, O_RDWR | O_CREAT | O_TRUNC | O_NONBLOCK | O_NDELAY);
+    int file = open(out_name, O_RDWR | O_CREAT | O_TRUNC | O_NONBLOCK | O_NDELAY);
     if (0 > file)
     {
         SYS_TRACE("ERR: FILE OPEN");
@@ -1500,12 +1500,12 @@ sys_result_e image_save(const rgb_frame_t *buf, const UINT32 size)
     return SYS_SUCCESS;
 }
 
-UINT32 image_getsavedframes(void)
+uint32_t image_getsavedframes(void)
 {
     return frameIdx;
 }
 
-static INT32 file_write_blocking(INT32 fd, const rgb_frame_t *buf, size_t size)
+static int file_write_blocking(int fd, const rgb_frame_t *buf, size_t size)
 {
     /* Bytes written to file */
     ssize_t wBytes = 0;

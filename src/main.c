@@ -21,7 +21,7 @@ static void *HelloCat_Task(void *threadp);
 
 int main(void)
 {
-    INT32 v4l_fd;
+    int v4l_fd;
     syslog_init(NAME, COURSE, ASSIGNMENT);
     syslog_printheader();
 
@@ -100,11 +100,11 @@ static void *HelloDog_Task(void *threadp)
 
     SYS_TRACE("Hello Dog Waiting for Start...");
 
-    UINT32 count = 0;
+    uint32_t count = 0;
 
     osal_task_wait_start(id);
 
-    while (DEF_TRUE)
+    while (true)
     {
         count++;
         if (count >= 5)
@@ -118,7 +118,7 @@ static void *HelloDog_Task(void *threadp)
     }
 
     SYS_TRACE("HelloDog_Task Exiting...");
-    osal_task_delete(id, DEF_FALSE);
+    osal_task_delete(id, false);
 
     return NULL;
 }
@@ -131,11 +131,11 @@ static void *HelloCat_Task(void *threadp)
 
     SYS_TRACE("Hello Cat Waiting for Start...");
 
-    UINT32 count = 0;
+    uint32_t count = 0;
 
     osal_task_wait_start(id);
 
-    while (DEF_TRUE)
+    while (true)
     {
         count++;
         if (count >= 5)
@@ -149,7 +149,7 @@ static void *HelloCat_Task(void *threadp)
     }
 
     SYS_TRACE("Hello Cat Task Exiting...");
-    osal_task_delete(id, DEF_FALSE);
+    osal_task_delete(id, false);
 
     return NULL;
 }

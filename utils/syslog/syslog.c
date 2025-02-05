@@ -37,7 +37,7 @@ static int vtrace_write(const char * msg, va_list argp);
 static char         *assignment_name;
 static int          course_num;
 static int          assignment_num;
-static BOOL_T       isInitialized = DEF_FALSE;
+static uint8_t       isInitialized = false;
 static printFunc_t  _printFunc;
 static vprintFunc_t _vprintFunc;
 static int          trace_fd;
@@ -84,11 +84,11 @@ sys_result_e syslog_init(char* assignment, const int courseNum, const int assign
         _printFunc = &trace_write;
         _vprintFunc = &vtrace_write;
 #else
-        _printFunc = DEF_NULL_PTR;
-        _vprintFunc = DEF_NULL_PTR;
+        _printFunc = NULL;
+        _vprintFunc = NULL;
 #endif
 
-        isInitialized = DEF_TRUE;
+        isInitialized = true;
 
         return SYS_SUCCESS;
     }
@@ -101,10 +101,10 @@ sys_result_e syslog_close(void)
     if (isInitialized)
     {
         close(trace_fd);
-        _printFunc = DEF_NULL_PTR;
-        _vprintFunc = DEF_NULL_PTR;
+        _printFunc = NULL;
+        _vprintFunc = NULL;
 
-        isInitialized = DEF_FALSE;
+        isInitialized = false;
 
         return SYS_SUCCESS;
     }
