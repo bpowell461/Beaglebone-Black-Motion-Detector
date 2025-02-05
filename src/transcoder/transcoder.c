@@ -33,12 +33,6 @@ void *transcoder_task(void *threadp)
         for (uint8_t i = 0; i < 2; i++)
         {
             process_frames();
-
-            if (image_getsavedframes() >= SAVED_FRAMES_MAX)
-            {
-                exit_task = true;
-                break;
-            }
         }
 
         if (exit_task)
@@ -59,6 +53,13 @@ void *transcoder_task(void *threadp)
     return NULL;
 }
 
+void *transcoder_exit(void *threadp)
+{
+    exit_task = true;
+
+    return NULL;
+}
+
 static void process_frames(void)
 {
     rgb_frame_t rgbFrame;
@@ -67,8 +68,6 @@ static void process_frames(void)
     if ( SYS_SUCCESS == framebuffer_getframe_ptr(camera_fd, &rawFrame))
     {
         image_convert(V4L2_PIX_FMT_YUYV, V4L2_PIX_FMT_RGB888, rawFrame->bytes, rgbFrame.bytes);
-
-        rgbFrame.timestamp = rawFrame->timestamp;
 
         imagebuffer_write(&rgbFrame);
 

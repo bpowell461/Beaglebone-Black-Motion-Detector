@@ -27,6 +27,7 @@ typedef struct
     osal_stack_t            task_stack;
     osal_priority_t         task_priority;
     osal_func               task_func;
+    osal_func               task_exit_func;
     osal_task_start_args_t  task_args;
     osal_task_t             task_handle;
 }osal_task_tcb_t;
@@ -75,6 +76,7 @@ static void osal_task_generic_sequencer(void);
 static sys_result_e osal_create_scheduler(void);
 
 static unsigned long long tick = 0;
+static uint8_t startShutdown =  false;
 
 sys_result_e osal_init(void)
 {
@@ -156,12 +158,14 @@ sys_result_e osal_deinit(void)
 
     osal_mutex_delete(&os_sched_mutex);
 
+    pthread_kill(osal_scheduler_tcb.task_handle, SIGKILL);
+
     os_initialized = false;
 
     return SYS_SUCCESS;
 }
 
-sys_result_e osal_task_create(osal_id_t *id, char* name, osal_stack_t stack, osal_priority_t priority, osal_func task_func, uint32_t period_ms, void* args)
+sys_result_e osal_task_create(osal_id_t *id, char* name, osal_stack_t stack, osal_priority_t priority, osal_func task_func, osal_func exit_func, uint32_t period_ms, void* args)
 {
     if (!os_initialized)
         return SYS_FAILURE;
@@ -205,6 +209,7 @@ sys_result_e osal_task_create(osal_id_t *id, char* name, osal_stack_t stack, osa
     osal_task_tcb[task_idx].task_stack = stack;
     osal_task_tcb[task_idx].task_priority = priority;
     osal_task_tcb[task_idx].task_func = task_func;
+    osal_task_tcb[task_idx].task_exit_func = exit_func;
     osal_task_tcb[task_idx].task_args = (osal_task_start_args_t){ task_idx, args};
 
     res = osal_sem_init(&osal_task_sequencers[task_idx].signal_sem);
@@ -583,16 +588,48 @@ cleanup:
 
 static void osal_signal_handler_dispatcher(const int signal)
 {
-    osal_sem_signal(&os_sched_sem);
-    tick++;
+    switch (signal)
+    {
+        case SIGALRM:
+        {
+            osal_sem_signal(&os_sched_sem);
+            tick++;
+            break;
+        }
+        case SIGTERM:
+        {
+            startShutdown = true;
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
 }
 
 static void* osal_signal_handler_task(void* threadp)
 {
     while (true)
     {
-        osal_sem_wait(&os_sched_sem);
-        osal_task_generic_sequencer();
+        if(!startShutdown)
+        {
+            osal_sem_wait(&os_sched_sem);
+            osal_task_generic_sequencer();
+        }
+        else
+        {
+            for (uint32_t i = 0; i < MAX_TASKS; i++)
+            {
+                if (osal_task_sequencers[i].task_state != TASKSTATE_UNUSED)
+                {
+                    if (osal_task_tcb[i].task_exit_func != NULL)
+                    {
+                        osal_task_tcb[i].task_exit_func(NULL);
+                    }
+                }
+            }
+        }
     }
 
     pthread_exit(NULL);

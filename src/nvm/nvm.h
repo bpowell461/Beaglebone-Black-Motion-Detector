@@ -5,5 +5,6 @@
 
 void nvm_init(int *fd);
 void *nvm_task(void *threadp);
+void *nvm_exit(void *threadp);
 
 #endif

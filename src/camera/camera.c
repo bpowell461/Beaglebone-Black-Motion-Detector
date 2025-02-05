@@ -44,6 +44,7 @@ typedef enum
 static int camera_fd;
 static uint32_t num_writes = 0;
 static uint32_t ignoreFrames = 0;
+camera_fsm_e state = eSTATE_ADJUSTING;
 
 static char *dev_name = "/dev/video0";
 
@@ -144,7 +145,6 @@ void camera_init(int *fd)
 
 void *camera_task(void *threadp)
 {
-    camera_fsm_e state = eSTATE_ADJUSTING;
     osal_task_start_args_t args = *(osal_task_start_args_t *)threadp;
 
     osal_id_t id = args.task_id;
@@ -178,10 +178,6 @@ void *camera_task(void *threadp)
                 {
                     num_writes++;
                 }
-                if (SAVED_FRAMES_MAX <= num_writes)
-                {
-                    state = eSTATE_EXIT;
-                }
                 osal_start_scheduler();
                 break;
             }
@@ -201,6 +197,13 @@ void *camera_task(void *threadp)
         osal_task_delay(id);
     }
 
+    return NULL;
+}
+
+void *camera_exit(void *threadp)
+{
+    (void)threadp;
+    state = eSTATE_EXIT;
     return NULL;
 }
 

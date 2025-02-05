@@ -42,7 +42,7 @@ int main(void)
 
     osal_priority_t prio = 97;
     osal_id_t camera_id;
-    if (SYS_SUCCESS != osal_task_create(&camera_id, "camera", 0, prio, camera_task, TASK_RATE_30HZ, NULL))
+    if (SYS_SUCCESS != osal_task_create(&camera_id, "camera", 0, prio, camera_task, camera_exit, TASK_RATE_30HZ, NULL))
     {
         SYS_TRACE("ERR: CAMERA TASK CREATE");
         exit(EXIT_FAILURE);
@@ -50,7 +50,7 @@ int main(void)
 
     prio = 80;
     osal_id_t transcoder_id;
-    if (SYS_SUCCESS != osal_task_create(&transcoder_id, "transcoder", 0, prio, transcoder_task, (2 * TASK_RATE_30HZ), NULL))
+    if (SYS_SUCCESS != osal_task_create(&transcoder_id, "transcoder", 0, prio, transcoder_task, transcoder_exit, (2 * TASK_RATE_30HZ), NULL))
     {
         SYS_TRACE("ERR: NVM TASK CREATE");
         exit(EXIT_FAILURE);
@@ -58,7 +58,7 @@ int main(void)
 
     prio = 75;
     osal_id_t nvm_id;
-    if (SYS_SUCCESS != osal_task_create(&nvm_id, "nvm", 0, prio, nvm_task, (2 * TASK_RATE_30HZ), NULL))
+    if (SYS_SUCCESS != osal_task_create(&nvm_id, "nvm", 0, prio, nvm_task, nvm_exit, (2 * TASK_RATE_30HZ), NULL))
     {
         SYS_TRACE("ERR: NVM TASK CREATE");
         exit(EXIT_FAILURE);
@@ -67,14 +67,14 @@ int main(void)
 #else
     osal_priority_t prio = 90;
     osal_id_t hellodog;
-    if (SYS_SUCCESS != osal_task_create(&hellodog, "hellodog", 0, prio, HelloDog_Task, TASK_RATE_1HZ, NULL))
+    if (SYS_SUCCESS != osal_task_create(&hellodog, "hellodog", 0, prio, HelloDog_Task, NULL, TASK_RATE_1HZ, NULL))
     {
         SYS_TRACE("ERR: HELLO DOG TASK CREATE");
     }
 
     prio = 80;
     osal_id_t hellocat;
-    if (SYS_SUCCESS != osal_task_create(&hellocat, "hellocat", 0, prio, HelloCat_Task, (3 * TASK_RATE_1HZ), NULL))
+    if (SYS_SUCCESS != osal_task_create(&hellocat, "hellocat", 0, prio, HelloCat_Task, NULL, (3 * TASK_RATE_1HZ), NULL))
     {
         SYS_TRACE("ERR: HELLO CAT TASK CREATE");
     }
