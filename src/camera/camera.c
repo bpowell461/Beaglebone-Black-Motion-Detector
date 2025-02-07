@@ -27,6 +27,7 @@ typedef enum
 
 typedef enum
 {
+    eSTATE_IDLE,
     eSTATE_ADJUSTING,
     eSTATE_CAPTURING,
     eSTATE_EXIT,
@@ -44,7 +45,8 @@ typedef enum
 static int camera_fd;
 static uint32_t num_writes = 0;
 static uint32_t ignoreFrames = 0;
-camera_fsm_e state = eSTATE_ADJUSTING;
+static camera_fsm_e state = eSTATE_ADJUSTING;
+static osal_mqueue_t mqueue;
 
 static char *dev_name = "/dev/video0";
 
@@ -53,7 +55,7 @@ static char *dev_name = "/dev/video0";
 /** Internal Function Prototypes **/
 static sys_result_e camera_capturestate(camera_state_e state);
 static sys_result_e camera_ioctl(int fh, uint32_t request, void *arg);
-
+static event_e process_event_queue(void);
 
 void camera_init(int *fd)
 {
@@ -141,6 +143,7 @@ void camera_init(int *fd)
 
     *fd = camera_fd;
 
+    osal_queue_create(&mqueue, EVENT_QUEUE_NAME, 10, sizeof(event_e));
 }
 
 void *camera_task(void *threadp)
@@ -157,8 +160,35 @@ void *camera_task(void *threadp)
 
     while(true)
     {
+        event_e event = process_event_queue();
+        
+        switch (event)
+        {
+            case EVENT_MOTION_DETECTED:
+            {
+                state = state == eSTATE_IDLE ? eSTATE_ADJUSTING : state;
+                break;
+            }
+            case EVENT_MOTION_LOST:
+            {
+                if (state != eSTATE_EXIT)
+                {
+                    state = eSTATE_IDLE;
+                }
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
+
         switch (state)
         {
+            case eSTATE_IDLE:
+            {
+                break;
+            }
             case eSTATE_ADJUSTING:
             {
                 if (SYS_FAILURE != framebuffer_writeframe(camera_fd, false))
@@ -173,12 +203,10 @@ void *camera_task(void *threadp)
             }
             case eSTATE_CAPTURING:
             {
-                osal_stop_scheduler();
                 if (SYS_SUCCESS == framebuffer_writeframe(camera_fd, true))
                 {
                     num_writes++;
                 }
-                osal_start_scheduler();
                 break;
             }
             case eSTATE_EXIT:
@@ -239,4 +267,18 @@ static sys_result_e camera_ioctl(int fh, uint32_t request, void *arg)
 
     return SYS_SUCCESS;
 }
+
+static event_e process_event_queue(void)
+{
+    event_e event = EVENT_NONE;
+    if (SYS_SUCCESS != osal_queue_receive(&mqueue, &event, sizeof(event_e)))
+    {
+        return EVENT_NONE;
+    }
+
+    return event;
+}
+
+
+
 

@@ -6,12 +6,7 @@
  *
  */
 #define _GNU_SOURCE
-#include <pthread.h>
-#include <sched.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <semaphore.h>
-#include <signal.h>
+
 #include "osal.h"
 #include "utils.h"
 #include "syslog.h"
@@ -529,6 +524,43 @@ sys_result_e osal_stop_scheduler(void)
     osal_mutex_unlock(&os_sched_mutex);
 
     return IS_ERROR(ret);
+}
+
+sys_result_e osal_queue_create(osal_mqueue_t *queue, const char *name, uint32_t queue_size, uint32_t msg_size)
+{
+    if (!os_initialized)
+        return SYS_FAILURE;
+
+    struct mq_attr attr;
+    attr.mq_flags = O_NONBLOCK;
+    attr.mq_maxmsg = queue_size;
+    attr.mq_msgsize = msg_size;
+    attr.mq_curmsgs = 0;
+
+    // Currently this only supports a one-way queue
+    *queue = mq_open(name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attr);
+
+    if (*queue == (mqd_t)-1)
+    {
+        return SYS_FAILURE;
+    }
+
+    return SYS_SUCCESS;
+}
+
+sys_result_e osal_queue_delete(osal_mqueue_t *queue)
+{
+    return IS_ERROR(mq_close(*queue));
+}
+
+sys_result_e osal_queue_send(osal_mqueue_t *queue, void *msg, uint32_t msg_size)
+{
+    return IS_ERROR(mq_send(*queue, msg, msg_size, 0));
+}
+
+sys_result_e osal_queue_receive(osal_mqueue_t *queue, void *msg, uint32_t msg_size)
+{
+    return IS_ERROR(mq_receive(*queue, msg, msg_size, 0));
 }
 
 static sys_result_e osal_create_scheduler(void)

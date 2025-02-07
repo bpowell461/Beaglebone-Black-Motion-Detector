@@ -12,6 +12,17 @@
 /* Hook your OS here */
 #include <pthread.h>
 #include <semaphore.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <sched.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <semaphore.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <mqueue.h>
+
 #include "types.h"
 #include "ringbuffer.h"
 
@@ -19,6 +30,7 @@
 typedef pthread_mutex_t     osal_mutex_t;
 typedef sem_t               osal_sem_t;
 typedef pthread_t           osal_task_t;
+typedef mqd_t               osal_mqueue_t;
 
 /* Configuration Types */
 typedef uint8_t osal_id_t;

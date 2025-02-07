@@ -9,7 +9,6 @@
 #ifndef OSAL_H_
 #define OSAL_H_
 
-#include <unistd.h>
 #include "osal_cfg.h"
 #include "osal_tasks_cfg.h"
 #include "types.h"
@@ -57,5 +56,13 @@ sys_result_e osal_task_wait(osal_id_t id);
 sys_result_e osal_start_scheduler(void);
 
 sys_result_e osal_stop_scheduler(void);
+
+sys_result_e osal_queue_create(osal_mqueue_t *queue, const char *name, uint32_t queue_size, uint32_t msg_size);
+
+sys_result_e osal_queue_delete(osal_mqueue_t *queue);
+
+sys_result_e osal_queue_send(osal_mqueue_t *queue, void *msg, uint32_t msg_size);
+
+sys_result_e osal_queue_receive(osal_mqueue_t *queue, void *msg, uint32_t msg_size);
 
 #endif // OSAL_H_
