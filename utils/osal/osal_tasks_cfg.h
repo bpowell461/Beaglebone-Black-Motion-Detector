@@ -11,8 +11,8 @@
 #define TASK_RATE_20HZ      (50U)
 #define TASK_RATE_25HZ      (40U)
 #define TASK_RATE_30HZ      (33U)
-#define TASK_RATE_50HZ      (20U)
-#define TASK_RATE_100HZ     (10U)
+#define TASK_RATE_50HZ      (22U)
+#define TASK_RATE_100HZ     (11U)
 #define TASK_RATE_200HZ     (1U)
 
 

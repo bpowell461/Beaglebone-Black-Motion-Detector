@@ -118,9 +118,7 @@ void *detection_task(void *threadp)
 
     osal_id_t id = args.task_id;
 
-    SYS_TRACE("Detection Task (ID: %u) Waiting for Start...", id);
-
-    osal_task_wait_start(id);
+    SYS_TRACE("Detection Task (ID: %u) Starting...", id);
 
     // Main loop to read the GPIO value
     while (true) 

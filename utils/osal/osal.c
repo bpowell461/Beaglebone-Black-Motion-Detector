@@ -539,13 +539,12 @@ sys_result_e osal_queue_create(osal_mqueue_t *queue, const char *name, uint32_t 
         return SYS_FAILURE;
 
     struct mq_attr attr;
-    attr.mq_flags = O_NONBLOCK;
+    attr.mq_flags = 0;
     attr.mq_maxmsg = queue_size;
     attr.mq_msgsize = msg_size;
     attr.mq_curmsgs = 0;
 
-    // Currently this only supports a one-way queue
-    *queue = mq_open(name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attr);
+    *queue = mq_open(name, O_CREAT | O_RDWR | O_NONBLOCK, S_IRUSR | S_IWUSR, &attr);
 
     if (*queue == (mqd_t)-1)
     {

@@ -24,26 +24,21 @@ void *transcoder_task(void *threadp)
 
     osal_id_t id = args.task_id;
 
-    SYS_TRACE("Transcoder Task (ID: %u) Waiting for Start...", id);
-
-    osal_task_wait_start(id);
+    SYS_TRACE("Transcoder Task (ID: %u) Starting...", id);
 
     while (true)
     {
+        if (exit_task)
+        {
+            break;
+        }
+
         for (uint8_t i = 0; i < 2; i++)
         {
             process_frames();
         }
 
-        if (exit_task)
-        {
-            SYS_TRACE("Maximum frames saved reached");
-            break;
-        }
-        else
-        {
-            osal_task_delay(id);
-        }
+        osal_task_delay(id);
     }
 
     SYS_TRACE("Transcoder Task Exiting...");

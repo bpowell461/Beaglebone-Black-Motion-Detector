@@ -32,9 +32,7 @@ void *nvm_task(void *threadp)
 
     rgb_frame_t *save_frame = NULL;
 
-    SYS_TRACE("NVM Task (ID: %u) Waiting for Start...", id);
-
-    osal_task_wait_start(id);
+    SYS_TRACE("NVM Task (ID: %u) Starting...", id);
 
     while(true)
     {
@@ -46,10 +44,8 @@ void *nvm_task(void *threadp)
                 {
                     SYS_TRACE("ERR: SAVING FILE");
                 }
-                else
-                {
-                    imagebuffer_endread();
-                }
+                
+                imagebuffer_endread();
             }
         }
 

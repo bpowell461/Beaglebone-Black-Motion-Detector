@@ -96,7 +96,7 @@ sys_result_e image_convert(uint32_t srcFmt, uint32_t destFmt, const uint8_t *src
     {
         case V4L2_PIX_FMT_RGB888:
         {
-            rgb888_convert(srcFmt, src_frame, dest_frame);
+            return rgb888_convert(srcFmt, src_frame, dest_frame);
         }
         case V4L2_PIX_FMT_MJPEG:
         {
@@ -131,6 +131,7 @@ static sys_result_e rgb888_convert(uint32_t srcFmt, const uint8_t *src_frame, ui
                 yuv2rgb(y_temp, u_temp, v_temp, &dest_frame[j], &dest_frame[j + 1], &dest_frame[j + 2]);
                 yuv2rgb(y2_temp, u_temp, v_temp, &dest_frame[j + 3], &dest_frame[j + 4], &dest_frame[j + 5]);
             }
+            break;
         }
         default:
         {
@@ -188,9 +189,9 @@ sys_result_e image_save(const rgb_frame_t *buf, const uint32_t size)
     }
 
     ret = file_write_blocking(file, buf, size);
-    if (0 > ret)
+    if (ret < 0)
     {
-        SYS_TRACE("ERR: WRITE");
+        SYS_TRACE("ERR: WRITE %s", strerror(errno));
         return SYS_FAILURE;
     }
 
@@ -215,12 +216,10 @@ static int file_write_blocking(int fd, const void *buf, size_t size)
 
     do
     {
-        wBytes += write(fd, &buf, sizeBuf);
+        wBytes += write(fd, (char*)buf + wBytes, sizeBuf);
+        sizeBuf -= (size_t)wBytes;
 
-        if (wBytes > 0)
-            sizeBuf -= (size_t)wBytes;
-
-    } while (wBytes < (size >> 1));
+    } while (sizeBuf > 0);
 
     return wBytes;
 }

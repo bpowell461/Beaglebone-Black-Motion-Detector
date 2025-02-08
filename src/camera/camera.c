@@ -29,7 +29,6 @@ typedef enum
 typedef enum
 {
     eSTATE_IDLE,
-    eSTATE_ADJUSTING,
     eSTATE_CAPTURING,
     eSTATE_EXIT,
     eSTATE_COUNT
@@ -46,7 +45,7 @@ typedef enum
 static int camera_fd;
 static uint32_t num_writes = 0;
 static uint32_t ignoreFrames = 0;
-static camera_fsm_e state = eSTATE_ADJUSTING;
+static camera_fsm_e state = eSTATE_IDLE;
 static osal_mqueue_t mqueue;
 
 static char *dev_name = "/dev/video0";
@@ -57,6 +56,7 @@ static char *dev_name = "/dev/video0";
 static sys_result_e camera_capturestate(camera_state_e state);
 static sys_result_e camera_ioctl(int fh, uint32_t request, void *arg);
 static event_e process_event_queue(void);
+static void set_camera_state(camera_fsm_e new_state);
 
 void camera_init(int *fd)
 {
@@ -153,9 +153,9 @@ void *camera_task(void *threadp)
 
     osal_id_t id = args.task_id;
 
-    SYS_TRACE("Camera Task (ID: %u) Waiting for Start...", id);
+    SYS_TRACE("Camera Task (ID: %u) Starting...", id);
 
-    osal_task_wait_start(id);
+    camera_capturestate(eCAMERA_ON);
 
     while(true)
     {
@@ -165,14 +165,17 @@ void *camera_task(void *threadp)
         {
             case EVENT_MOTION_DETECTED:
             {
-                state = state == eSTATE_IDLE ? eSTATE_ADJUSTING : state;
+                if (state == eSTATE_IDLE ? eSTATE_CAPTURING)
+                {
+                    set_camera_state(eSTATE_CAPTURING);
+                };
                 break;
             }
             case EVENT_MOTION_LOST:
             {
                 if (state != eSTATE_EXIT)
                 {
-                    state = eSTATE_IDLE;
+                    set_camera_state(eSTATE_IDLE);
                 }
                 break;
             }
@@ -186,20 +189,8 @@ void *camera_task(void *threadp)
         {
             case eSTATE_IDLE:
             {
-                camera_capturestate(eCAMERA_OFF);
-                break;
-            }
-            case eSTATE_ADJUSTING:
-            {
-                camera_capturestate(eCAMERA_ON);
-                if (SYS_FAILURE != framebuffer_writeframe(camera_fd, false))
-                {
-                    ignoreFrames++;
-                }
-                if (ignoreFrames >= MAX_IGNORE_FRAMES)
-                {
-                    state = eSTATE_CAPTURING;
-                }
+                // Lets not write the frame to the framebuffer, but still capture it
+                framebuffer_writeframe(camera_fd, false);
                 break;
             }
             case eSTATE_CAPTURING:
@@ -218,7 +209,7 @@ void *camera_task(void *threadp)
             }
             default:
             {
-                state = eSTATE_IDLE;
+                set_camera_state(eSTATE_IDLE);
                 break;
             }
         }
@@ -232,7 +223,7 @@ void *camera_task(void *threadp)
 void *camera_exit(void *threadp)
 {
     (void)threadp;
-    state = eSTATE_EXIT;
+    set_camera_state(eSTATE_EXIT);
     return NULL;
 }
 
@@ -280,6 +271,11 @@ static event_e process_event_queue(void)
     return event;
 }
 
+static void set_camera_state(camera_fsm_e new_state)
+{
+    SYS_TRACE("Camera FSM: %d", new_state);
+    state = new_state;
+}
 
 
 
