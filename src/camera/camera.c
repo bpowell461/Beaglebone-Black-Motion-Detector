@@ -14,6 +14,7 @@
 #include "syslog.h"
 #include "framebuffer.h"
 #include "camera_cfg.h"
+#include "events.h"
 
 /** Macros **/
 
@@ -187,10 +188,12 @@ void *camera_task(void *threadp)
         {
             case eSTATE_IDLE:
             {
+                camera_capturestate(eCAMERA_OFF);
                 break;
             }
             case eSTATE_ADJUSTING:
             {
+                camera_capturestate(eCAMERA_ON);
                 if (SYS_FAILURE != framebuffer_writeframe(camera_fd, false))
                 {
                     ignoreFrames++;
@@ -213,18 +216,18 @@ void *camera_task(void *threadp)
             {
                 SYS_TRACE("Camera Task Exiting...");
                 camera_capturestate(eCAMERA_OFF);
-                osal_task_delete(id, false);
                 break;
             }
             default:
             {
-                state = eSTATE_EXIT;
+                state = eSTATE_IDLE;
                 break;
             }
         }
         osal_task_delay(id);
     }
 
+    osal_task_delete(id, false);
     return NULL;
 }
 

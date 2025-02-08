@@ -8,10 +8,10 @@
 #include "utils.h"
 
 /* Application Specific Defines */
-#define CAMERA_USE_MJPEG
+#define CAMERA_USE_YUV
 
 /* Configuration Defines */
-#define MAX_IGNORE_FRAMES (100u)
+#define MAX_IGNORE_FRAMES (30u)
 
 #if defined(CAMERA_USE_YUV)
 #define PIXEL_FORMAT_CAMERA (V4L2_PIX_FMT_YUYV)
@@ -51,7 +51,6 @@
 /* Custom Image Formats */
 #define V4L2_PIX_FMT_RGB888 (v4l2_fourcc('R', 'G', 'B', '8'))
 
-#pragma pack(1)
 /* This is the "raw" frame size */
 typedef struct
 {
@@ -63,6 +62,5 @@ typedef struct
 {
     uint8_t bytes[RGB_FRAME_SIZE_BYTES];
 }rgb_frame_t;
-#pragma pack(pop)
 
 #endif

@@ -6,6 +6,7 @@
 #include "nvm.h"
 #include "framebuffer.h"
 #include "transcoder.h"
+#include "detection.h"
 #include <stdlib.h>
 
 #define NUM_THREADS 2
@@ -39,10 +40,19 @@ int main(void)
     framebuffer_init(&v4l_fd);
     nvm_init(&v4l_fd);
     transcoder_init(&v4l_fd);
+    detection_init();
 
-    osal_priority_t prio = 97;
+    osal_priority_t prio = 95;
+    osal_id_t detection_id;
+    if (SYS_SUCCESS != osal_task_create(&detection_id, "detection", 0, prio, detection_task, detection_exit, TASK_RATE_100HZ, NULL))
+    {
+        SYS_TRACE("ERR: DETECTION TASK CREATE");
+        exit(EXIT_FAILURE);
+    }
+
+    prio = 90;
     osal_id_t camera_id;
-    if (SYS_SUCCESS != osal_task_create(&camera_id, "camera", 0, prio, camera_task, camera_exit, TASK_RATE_30HZ, NULL))
+    if (SYS_SUCCESS != osal_task_create(&camera_id, "camera", 0, prio, camera_task, camera_exit, TASK_RATE_50HZ, NULL))
     {
         SYS_TRACE("ERR: CAMERA TASK CREATE");
         exit(EXIT_FAILURE);

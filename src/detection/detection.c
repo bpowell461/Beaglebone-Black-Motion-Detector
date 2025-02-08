@@ -1,6 +1,7 @@
 #include "detection.h"
 #include "osal.h"
 #include "syslog.h"
+#include "events.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -18,6 +19,7 @@
 static osal_mqueue_t mqueue;
 
 static uint8_t motion_detected = false;
+static uint8_t exit_flag = false;
 
 int initialize_gpio() {
     int fd;
@@ -144,18 +146,12 @@ void *detection_task(void *threadp)
     osal_task_wait_start(id);
 
     // Main loop to read the GPIO value
-    struct pollfd fds;
-    int timeout_ms = 5000; // 5 seconds timeout in milliseconds
-
-    fds.fd = open(GPIO_PATH, O_RDONLY);
-    if (fds.fd < 0) {
-        perror("Failed to open gpio value for polling");
-        return NULL;
-    }
-    fds.events = POLLPRI | POLLERR;
-
     while (true) 
     {
+        if (exit_flag) 
+        {
+            break;
+        }
         uint8_t cur_status = read_gpio_value();
 
         if (cur_status && !motion_detected) 
@@ -167,33 +163,27 @@ void *detection_task(void *threadp)
         } 
         else if (!cur_status && motion_detected) 
         {
-            int ret = poll(&fds, 1, timeout_ms);
-            if (ret == 0) 
+            nanosleep((const struct timespec[]){{5, 0L}}, NULL); // Sleep for 5 seconds
+            if (!read_gpio_value()) 
             {
-                if (!read_gpio_value()) 
-                {
-                    motion_detected = false;
-                    event_e event = EVENT_MOTION_LOST;
-                    osal_queue_send(&mqueue, &event, sizeof(event_e));
-                    SYS_TRACE("Motion Lost: %d", motion_detected);
-                }
-            } 
-            else if (ret < 0) 
-            {
-                perror("Poll error");
+                motion_detected = false;
+                event_e event = EVENT_MOTION_LOST;
+                osal_queue_send(&mqueue, &event, sizeof(event_e));
+                SYS_TRACE("Motion Lost: %d", motion_detected);
             }
         }
 
         osal_task_delay(id);
     }
 
-    close(fds.fd);
+    osal_task_delete(id, false);
 
     return NULL;
 }
 
 void *detection_exit(void *threadp)
 {
+    exit_flag = true;
     deinitialize_gpio();
     return NULL;
 }

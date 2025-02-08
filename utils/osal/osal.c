@@ -157,6 +157,8 @@ sys_result_e osal_deinit(void)
 
     os_initialized = false;
 
+    SYS_TRACE("OSAL Deinitialized");
+
     return SYS_SUCCESS;
 }
 
@@ -651,6 +653,7 @@ static void* osal_signal_handler_task(void* threadp)
         }
         else
         {
+            SYS_TRACE("Shutting down OSAL...");
             for (uint32_t i = 0; i < MAX_TASKS; i++)
             {
                 if (osal_task_sequencers[i].task_state != TASKSTATE_UNUSED)

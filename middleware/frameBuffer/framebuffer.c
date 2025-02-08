@@ -30,8 +30,6 @@ struct buffer {
 static struct buffer buffers[NUM_FRAME_BUFS];
 
 static int framebuffer_fd;
-static uint32_t frame_cnt = 0;
-static uint32_t save_cnt = 0;
 
 static sys_result_e framebuffer_ioctl(int fd, uint32_t request, void *arg);
 static uint32_t       framebuffer_requestbuffers(uint8_t count);
@@ -119,7 +117,7 @@ sys_result_e framebuffer_writeframe(int fd, uint8_t saveFrame)
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
 
-    uint8_t writeCondition = saveFrame && (frame_cnt % OVERSAMPLE_FRAME == 0);
+    uint8_t writeCondition = saveFrame;
 
     FD_ZERO(&fds);
     FD_SET(fd, &fds);
@@ -137,16 +135,7 @@ sys_result_e framebuffer_writeframe(int fd, uint8_t saveFrame)
     {
         if (!ringbuffer_isFull(&incomingBuffer))
         {
-            if (!save_cnt)
-            {
-                start_time = buf.timestamp;
-            }
-
             ringbuffer_memcpy(incomingBuffer.data[incomingBuffer.writePtr].bytes, buffers[buf.index].start, buf.bytesused);
-
-            timersub(&buf.timestamp, &start_time, &incomingBuffer.data[incomingBuffer.writePtr].timestamp);
-
-            save_cnt++;
 
             ringbuffer_inc_writeptr(&incomingBuffer);
         }
@@ -160,9 +149,6 @@ sys_result_e framebuffer_writeframe(int fd, uint8_t saveFrame)
     {
         return SYS_FAILURE;
     }
-
-    if(saveFrame)
-        frame_cnt++;
 
     if (writeCondition)
     {
