@@ -162,6 +162,7 @@ sys_result_e framebuffer_writeframe(int fd, uint8_t saveFrame)
 
 sys_result_e framebuffer_deinit(void)
 {
+    SYS_TRACE("Deinitializing Framebuffer");
     close(framebuffer_fd);
     for (uint32_t i = 0; i < NUM_FRAME_BUFS; ++i)
         munmap(buffers[i].start, buffers[i].size);

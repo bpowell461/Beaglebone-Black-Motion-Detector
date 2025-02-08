@@ -90,7 +90,11 @@ int main(void)
     }
 #endif
 
-    osal_start_scheduler();
+    if (SYS_SUCCESS != osal_start_scheduler())
+    {
+        SYS_TRACE("ERR: START SCHEDULER");
+        return SYS_FAILURE;
+    }
 
     osal_task_wait_all();
 

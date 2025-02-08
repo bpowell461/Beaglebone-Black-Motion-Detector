@@ -11,7 +11,7 @@
 #include "utils.h"
 #include "syslog.h"
 
-#define MAX_TASKS 4
+#define MAX_TASKS 5
 
 #define TIMER_TICK_MS (11U)
 
@@ -442,6 +442,7 @@ void osal_task_set_period(osal_id_t id, uint32_t period_ms)
 
 uint32_t osal_task_wait_all(void)
 {
+    SYS_TRACE("Waiting for all tasks to finish...");
     uint32_t runningTasks = 0;
     if (os_initialized)
     {
@@ -477,6 +478,8 @@ sys_result_e osal_start_scheduler(void)
     if (!os_initialized)
         return SYS_FAILURE;
 
+    SYS_TRACE("Starting Scheduler...");
+
     int ret;
     struct sigaction action;
 
@@ -493,6 +496,8 @@ sys_result_e osal_start_scheduler(void)
         sigemptyset(&action.sa_mask);
         action.sa_flags = 0;
         sigaction(SIGALRM, &action, NULL);
+        sigaction(SIGINT, &action, NULL);
+        sigaction(SIGTERM, &action, NULL);
 
         sequencerCallbackAssigned = true;
     }
@@ -630,6 +635,7 @@ static void osal_signal_handler_dispatcher(const int signal)
             tick++;
             break;
         }
+        case SIGINT:
         case SIGTERM:
         {
             startShutdown = true;
@@ -644,28 +650,26 @@ static void osal_signal_handler_dispatcher(const int signal)
 
 static void* osal_signal_handler_task(void* threadp)
 {
-    while (true)
+    while (!startShutdown)
     {
-        if(!startShutdown)
+        osal_sem_wait(&os_sched_sem);
+        osal_task_generic_sequencer();
+    }
+
+    osal_stop_scheduler();
+    SYS_TRACE("Shutting down OSAL...");
+    for (uint32_t i = 0; i < MAX_TASKS; i++)
+    {
+        if (osal_task_sequencers[i].task_state != TASKSTATE_UNUSED)
         {
-            osal_sem_wait(&os_sched_sem);
-            osal_task_generic_sequencer();
-        }
-        else
-        {
-            SYS_TRACE("Shutting down OSAL...");
-            for (uint32_t i = 0; i < MAX_TASKS; i++)
+            if (osal_task_tcb[i].task_exit_func != NULL)
             {
-                if (osal_task_sequencers[i].task_state != TASKSTATE_UNUSED)
-                {
-                    if (osal_task_tcb[i].task_exit_func != NULL)
-                    {
-                        osal_task_tcb[i].task_exit_func(NULL);
-                    }
-                }
+                osal_task_tcb[i].task_exit_func(NULL);
             }
         }
     }
+
+    osal_deinit();
 
     pthread_exit(NULL);
 }

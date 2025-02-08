@@ -157,8 +157,6 @@ void *camera_task(void *threadp)
 
     osal_task_wait_start(id);
 
-    camera_capturestate(eCAMERA_ON);
-
     while(true)
     {
         event_e event = process_event_queue();

@@ -106,31 +106,8 @@ int read_gpio_value() {
     return (value == '1') ? 1 : 0;
 }
 
-void signal_handler(int signo) {
-    if (signo == SIGINT) {
-        printf("Closing motion detector...\n");
-        deinitialize_gpio();
-        exit(0);
-    }
-}
-
-int register_signal_handler() {
-    struct sigaction sa;
-
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = signal_handler;
-
-    if (sigaction(SIGINT, &sa, NULL) < 0) {
-        perror("Failed to register signal handler");
-        return -1;
-    }
-
-    return 0;
-}
-
 void detection_init(void)
 {
-    register_signal_handler();
     initialize_gpio();
     osal_queue_create(&mqueue, EVENT_QUEUE_NAME, 10, sizeof(event_e));
 }
