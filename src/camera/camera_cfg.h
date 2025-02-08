@@ -34,8 +34,8 @@
 
 #define PIXEL_FORMAT_CAMERA v4l2_fourcc('M', 'J', 'P', 'G')
 #define PIXEL_FORMAT_FIELD  (V4L2_FIELD_INTERLACED)
-#define PIXEL_WIDTH     640
-#define PIXEL_HEIGHT    480
+#define PIXEL_WIDTH     320
+#define PIXEL_HEIGHT    240
 #define FRAME_SIZE      (PIXEL_WIDTH * PIXEL_HEIGHT)
 #define IMAGE_EXT       ".mjpg"
 
@@ -46,8 +46,8 @@
 #endif
 
 #define IMAGE_FILE(x) (x IMAGE_EXT)
-#define IMAGE_HEADER ("P6\n# %s\n# Timestamp: %ld.%ld \n"STR(PIXEL_WIDTH)" "STR(PIXEL_HEIGHT)"\n255\n")
-#define RGB_FRAME_SIZE_BYTES (PIXEL_WIDTH * PIXEL_HEIGHT * 3)
+#define PPM_IMAGE_HEADER ("P6\n# %s\n# Timestamp: %ld.%ld \n"STR(PIXEL_WIDTH)" "STR(PIXEL_HEIGHT)"\n255\n")
+#define RGB_FRAME_SIZE_BYTES (FRAME_SIZE)
 
 /* Custom Image Formats */
 #define V4L2_PIX_FMT_RGB888 (v4l2_fourcc('R', 'G', 'B', '8'))

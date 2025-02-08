@@ -133,6 +133,13 @@ static sys_result_e rgb888_convert(uint32_t srcFmt, const uint8_t *src_frame, ui
             }
             break;
         }
+        case V4L2_PIX_FMT_MJPEG:
+        case V4L2_PIX_FMT_RGB888:
+        {
+            /* Already in RGB888 format */
+            memcpy(dest_frame, src_frame, FRAME_SIZE);
+            break;
+        }
         default:
         {
             /* Catch all for formats not supported yet */
@@ -219,7 +226,7 @@ static int file_write_blocking(int fd, const void *buf, size_t size)
         wBytes += write(fd, (char*)buf + wBytes, sizeBuf);
         sizeBuf -= (size_t)wBytes;
 
-    } while (sizeBuf > 0);
+    } while (wBytes < size);
 
     return wBytes;
 }

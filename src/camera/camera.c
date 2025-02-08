@@ -165,7 +165,7 @@ void *camera_task(void *threadp)
         {
             case EVENT_MOTION_DETECTED:
             {
-                if (state == eSTATE_IDLE ? eSTATE_CAPTURING)
+                if (state == eSTATE_IDLE)
                 {
                     set_camera_state(eSTATE_CAPTURING);
                 };
