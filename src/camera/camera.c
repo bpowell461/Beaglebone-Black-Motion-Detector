@@ -30,6 +30,7 @@ typedef enum
 {
     eSTATE_IDLE,
     eSTATE_CAPTURING,
+    eSTATE_EXITING,
     eSTATE_EXIT,
     eSTATE_COUNT
 }camera_fsm_e;
@@ -157,7 +158,7 @@ void *camera_task(void *threadp)
 
     camera_capturestate(eCAMERA_ON);
 
-    while(true)
+    while(state != eSTATE_EXIT)
     {
         event_e event = process_event_queue();
         
@@ -201,15 +202,15 @@ void *camera_task(void *threadp)
                 }
                 break;
             }
-            case eSTATE_EXIT:
+            case eSTATE_EXITING:
             {
                 SYS_TRACE("Camera Task Exiting...");
                 camera_capturestate(eCAMERA_OFF);
+                set_camera_state(eSTATE_EXIT);
                 break;
             }
             default:
             {
-                set_camera_state(eSTATE_IDLE);
                 break;
             }
         }

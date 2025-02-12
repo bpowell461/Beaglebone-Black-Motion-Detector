@@ -12,12 +12,6 @@
 
 ringbuffer_typedef(rgb_frame_t, rgbImageBuffer_t);
 
-typedef struct
-{
-    osal_mutex_t write_mtx;
-    osal_mutex_t read_mtx;
-}buffer_mtx_handle_t;
-
 static rgbImageBuffer_t imageBuffer;
 static uint32_t frameIdx = 0;
 

@@ -16,10 +16,30 @@
 #define GPIO_PATH "/sys/class/gpio/gpio" GPIO_PIN "/value"
 #define STARTUP_DELAY 10 // 10 seconds startup delay
 
+typedef enum {
+    eSTATE_DETECTING,
+    eSTATE_MOTION_DETECTED,
+    eSTATE_MOTION_LOST,
+    eSTATE_TIMEOUT,
+    eSTATE_EXITING,
+    eSTATE_EXIT
+}detection_fsm_state_e;
+
+typedef enum {
+    eSUBSTATE_ENTRY,
+    eSUBSTATE_RUN,
+    eSUBSTATE_EXIT
+}detection_fsm_substate_e;
+
 static osal_mqueue_t mqueue;
 
 static uint8_t motion_detected = false;
-static uint8_t exit_flag = false;
+static detection_fsm_state_e detection_state = eSTATE_DETECTING;
+static detection_fsm_substate_e detection_substate = eSUBSTATE_ENTRY;
+static struct timespec timeout_start;
+
+static void set_detection_state(detection_fsm_state_e state);
+static void process_next_state(uint8_t cur_status);
 
 int initialize_gpio() {
     int fd;
@@ -121,30 +141,74 @@ void *detection_task(void *threadp)
     SYS_TRACE("Detection Task (ID: %u) Starting...", id);
 
     // Main loop to read the GPIO value
-    while (true) 
+    while (detection_state != eSTATE_EXIT) 
     {
-        if (exit_flag) 
-        {
-            break;
-        }
         uint8_t cur_status = read_gpio_value();
-
-        if (cur_status && !motion_detected) 
+        process_next_state(cur_status);
+        
+        switch(detection_state)
         {
-            motion_detected = true;
-            event_e event = EVENT_MOTION_DETECTED;
-            osal_queue_send(&mqueue, &event, sizeof(event_e));
-            SYS_TRACE("Motion Detected: %d", motion_detected);
-        } 
-        else if (!cur_status && motion_detected) 
-        {
-            nanosleep((const struct timespec[]){{5, 0L}}, NULL); // Sleep for 5 seconds
-            if (!read_gpio_value()) 
+            case eSTATE_DETECTING:
+            {
+                // This is our "idle" state, there isn't much to do here for now
+                break;
+            }
+            case eSTATE_MOTION_DETECTED:
+            {
+                motion_detected = true;
+                event_e event = EVENT_MOTION_DETECTED;
+                osal_queue_send(&mqueue, &event, sizeof(event_e));
+                SYS_TRACE("Motion Detected: %d", motion_detected);
+                set_detection_state(eSTATE_DETECTING);
+                break;
+            }
+            case eSTATE_MOTION_LOST:
             {
                 motion_detected = false;
                 event_e event = EVENT_MOTION_LOST;
                 osal_queue_send(&mqueue, &event, sizeof(event_e));
                 SYS_TRACE("Motion Lost: %d", motion_detected);
+                set_detection_state(eSTATE_DETECTING);
+                break;
+            }
+            case eSTATE_TIMEOUT:
+            {
+                switch(detection_substate)
+                {
+                    case eSUBSTATE_ENTRY:
+                    {
+                        detection_substate = eSUBSTATE_RUN;
+                        clock_gettime(CLOCK_MONOTONIC, &timeout_start);
+                        SYS_TRACE("Starting Timeout...");
+                        break;
+                    }
+                    case eSUBSTATE_RUN:
+                    {
+                        struct timespec current;
+                        clock_gettime(CLOCK_MONOTONIC, &current);
+                        double elapsed = (current.tv_sec - timeout_start.tv_sec) + 
+                                        (current.tv_nsec - timeout_start.tv_nsec) / 1e9;
+
+                        if (elapsed >= 5.0) 
+                        {
+                            detection_substate = eSUBSTATE_EXIT;
+                            break;
+                        }
+                        
+                        break;
+                    }
+                    case eSUBSTATE_EXIT:
+                    {
+                        motion_detected = false;
+                        set_detection_state(eSTATE_MOTION_LOST);
+                        break;
+                    }
+                }
+                break;
+            }
+            default:
+            {
+                break;
             }
         }
 
@@ -158,7 +222,35 @@ void *detection_task(void *threadp)
 
 void *detection_exit(void *threadp)
 {
-    exit_flag = true;
+    set_detection_state(eSTATE_EXIT);
     deinitialize_gpio();
     return NULL;
+}
+
+static void set_detection_state(detection_fsm_state_e state)
+{
+    SYS_TRACE("Detection State: %d", state);
+    detection_state = state;
+}
+
+static void process_next_state(uint8_t cur_status)
+{
+    if (cur_status && !motion_detected) 
+    {
+        if (detection_state == eSTATE_TIMEOUT)
+        {
+            SYS_TRACE("Timeout Cancelled...");
+        }
+        set_detection_state(eSTATE_MOTION_DETECTED);
+    }
+    else if (!cur_status && motion_detected) 
+    {
+        // Set the state to timeout and sub-state for entry'
+        motion_detected = false;
+        if (detection_state != eSTATE_TIMEOUT)
+        {
+            detection_substate = eSUBSTATE_ENTRY;
+            set_detection_state(eSTATE_TIMEOUT);
+        }
+    }
 }

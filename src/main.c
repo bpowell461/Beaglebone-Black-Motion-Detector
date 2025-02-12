@@ -9,10 +9,8 @@
 #include "detection.h"
 #include <stdlib.h>
 
-#define NUM_THREADS 2
-
 #define ASSIGNMENT 1
-#define COURSE 4
+#define COURSE 3
 #define NAME "Final Project"
 
 #ifdef SIMPLE_TASKS
