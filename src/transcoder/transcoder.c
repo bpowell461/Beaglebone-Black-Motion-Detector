@@ -62,7 +62,6 @@ static void process_frames(void)
 
     if ( SYS_SUCCESS == framebuffer_getframe_ptr(camera_fd, &rawFrame))
     {
-        SYS_TRACE("Transcoder: Processing Frame");
         image_convert(PIXEL_FORMAT_CAMERA, V4L2_PIX_FMT_RGB888, rawFrame->bytes, rgbFrame.bytes);
 
         imagebuffer_write(&rgbFrame);

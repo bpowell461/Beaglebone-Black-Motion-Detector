@@ -62,6 +62,7 @@ void *nvm_task(void *threadp)
 
     SYS_TRACE("NVM Task Exiting...");
 
+    image_close();
     osal_task_delete(id, false);
 
     return NULL;

@@ -9,11 +9,17 @@
 #include "osal.h"
 #include "utils.h"
 #include "syslog.h"
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
+#define STREAM_TO_SERVER
 
 ringbuffer_typedef(rgb_frame_t, rgbImageBuffer_t);
 
 static rgbImageBuffer_t imageBuffer;
 static uint32_t frameIdx = 0;
+static int sockfd = -1;
+static struct sockaddr_in pc_addr;
 
 static uint8_t imagebuffer_initialized = false;
 
@@ -176,6 +182,45 @@ static inline void yuv2rgb(int y, int u, int v, uint8_t *r, uint8_t *g, uint8_t 
     *b = (uint8_t) BB & 0xFFu;
 }
 
+#ifdef STREAM_TO_SERVER
+sys_result_e image_save(const rgb_frame_t *buf, const uint32_t size)
+{
+    if (sockfd == -1)
+    {
+        if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+            perror("Socket creation failed");
+            return SYS_FAILURE;
+        }
+    
+        memset(&pc_addr, 0, sizeof(pc_addr));
+    
+        // Fill PC information
+        pc_addr.sin_family = AF_INET;
+        pc_addr.sin_port = htons(3000);
+        pc_addr.sin_addr.s_addr = inet_addr("192.168.56.1");
+    }
+
+    // Send MJPEG data
+    ssize_t wBytes = 0;
+    ssize_t sizeBuf = size;
+    ssize_t sizeSent = 0;
+    do
+    {
+        // UDP can only send 65,535 bytes at a time so we need to split the data
+        sizeSent = sendto(sockfd, (char*)buf + wBytes, CLAMP_UPPER(sizeBuf, UINT16_MAX), 0, (const struct sockaddr *)&pc_addr, sizeof(pc_addr));
+        if (sizeSent < 0)
+        {
+            perror("Send failed");
+            return SYS_FAILURE;
+        }
+
+        wBytes += sizeSent;
+        sizeBuf -= (size_t)wBytes;
+    } while (wBytes < size);
+
+    return SYS_SUCCESS;
+}
+#else
 sys_result_e image_save(const rgb_frame_t *buf, const uint32_t size)
 {
     char out_name[256];
@@ -202,6 +247,7 @@ sys_result_e image_save(const rgb_frame_t *buf, const uint32_t size)
 
     return SYS_SUCCESS;
 }
+#endif
 
 uint32_t image_getsavedframes(void)
 {
@@ -223,4 +269,12 @@ static int file_write_blocking(int fd, const void *buf, size_t size)
     } while (wBytes < size);
 
     return wBytes;
+}
+
+sys_result_e image_close(void)
+{
+    close(sockfd);
+    imagebuffer_initialized = false;
+
+    return SYS_SUCCESS;
 }

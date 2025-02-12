@@ -11,6 +11,7 @@ sys_result_e imagebuffer_write(rgb_frame_t *frame);
 sys_result_e image_convert(uint32_t srcFmt, uint32_t destFmt, const uint8_t *src_frame, uint8_t *dest_frame);
 sys_result_e image_save(const rgb_frame_t *buf, const uint32_t size);
 uint32_t     image_getsavedframes(void);
+sys_result_e image_close(void);
 
 /* Externs for the color LUT */
 extern const int PRECISION;
