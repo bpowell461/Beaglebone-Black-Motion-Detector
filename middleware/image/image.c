@@ -207,7 +207,8 @@ sys_result_e image_save(const rgb_frame_t *buf, const uint32_t size)
     do
     {
         // UDP can only send 65,535 bytes at a time so we need to split the data
-        sizeSent = sendto(sockfd, (char*)buf + wBytes, CLAMP_UPPER(sizeBuf, UINT16_MAX), 0, (const struct sockaddr *)&pc_addr, sizeof(pc_addr));
+        CLAMP_UPPER(sizeBuf, 1000);
+        sizeSent = sendto(sockfd, (char*)buf + wBytes, sizeBuf, 0, (const struct sockaddr *)&pc_addr, sizeof(pc_addr));
         if (sizeSent < 0)
         {
             perror("Send failed");
@@ -215,7 +216,7 @@ sys_result_e image_save(const rgb_frame_t *buf, const uint32_t size)
         }
 
         wBytes += sizeSent;
-        sizeBuf -= (size_t)wBytes;
+        sizeBuf = size - sizeSent;
     } while (wBytes < size);
 
     return SYS_SUCCESS;
