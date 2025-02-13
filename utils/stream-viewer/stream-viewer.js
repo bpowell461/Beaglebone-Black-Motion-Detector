@@ -11,13 +11,13 @@ const server = dgram.createSocket('udp4');
 let frameQueue = [];
 let frameBuffer = Buffer.alloc(0);
 
+const startMarker = Buffer.from([0xFF, 0xD8]);
+const endMarker = Buffer.from([0xFF, 0xD9]);
+
 server.on('message', (msg) => {
     // Append the incoming message to the frame buffer
     frameBuffer = Buffer.concat([frameBuffer, msg]);
 
-    // Check if the frame is complete (each frame starts with 0xFFD8 and ends with 0xFFD9)
-    const startMarker = Buffer.from([0xFF, 0xD8]);
-    const endMarker = Buffer.from([0xFF, 0xD9]);
     let startMarkerIndex, endMarkerIndex;
 
     while ((startMarkerIndex = frameBuffer.indexOf(startMarker)) !== -1 && 
