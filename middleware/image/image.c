@@ -197,7 +197,7 @@ sys_result_e image_save(const rgb_frame_t *buf, const uint32_t size)
         // Fill PC information
         pc_addr.sin_family = AF_INET;
         pc_addr.sin_port = htons(3000);
-        pc_addr.sin_addr.s_addr = inet_addr("192.168.56.1");
+        pc_addr.sin_addr.s_addr = inet_addr("192.168.7.1");
     }
 
     // Send MJPEG data
@@ -207,7 +207,7 @@ sys_result_e image_save(const rgb_frame_t *buf, const uint32_t size)
     do
     {
         // UDP can only send 65,535 bytes at a time so we need to split the data
-        CLAMP_UPPER(sizeBuf, 1000);
+        CLAMP_UPPER(sizeBuf, 32767);
         sizeSent = sendto(sockfd, (char*)buf + wBytes, sizeBuf, 0, (const struct sockaddr *)&pc_addr, sizeof(pc_addr));
         if (sizeSent < 0)
         {
