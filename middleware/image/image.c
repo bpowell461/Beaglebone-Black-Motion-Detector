@@ -216,7 +216,7 @@ sys_result_e image_save(const rgb_frame_t *buf, const uint32_t size)
         }
 
         wBytes += sizeSent;
-        sizeBuf = size - sizeSent;
+        sizeBuf = size - wBytes;
     } while (wBytes < size);
 
     return SYS_SUCCESS;
