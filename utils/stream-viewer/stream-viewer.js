@@ -64,3 +64,7 @@ const httpServer = http.createServer((req, res) => {
 httpServer.listen(8080, () => {
     console.log('HTTP Server listening on port 8080');
 });
+
+httpServer.on('close', () => {
+    console.log('HTTP Server has closed');
+});
