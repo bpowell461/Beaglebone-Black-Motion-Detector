@@ -1,0 +1,4 @@
+config BR2_PACKAGE_DETECTOR
+    bool "detector"
+    help
+      This is the detector application for the Beaglebone Black.
