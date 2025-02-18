@@ -24,20 +24,20 @@ graph TD
 ### Components
 
 #### PIR Sensor
-![Seeed Technology Co., Ltd 101020060 PIR Motion Sensor](image.png)
+![Seeed Technology Co., Ltd 101020060 PIR Motion Sensor](res/image.png)
 [Seeed Technology Co., Ltd 101020060 PIR Motion Sensor](https://www.digikey.com/en/products/detail/seeed-technology-co-ltd/101020060/5487425?gclsrc=aw.ds&&utm_adgroup=&utm_source=google&utm_medium=cpc&utm_campaign=PMax%20Shopping_Product_Low%20ROAS%20Categories&utm_term=&utm_content=&utm_id=go_cmp-20243063506_adg-_ad-__dev-c_ext-_prd-5487425_sig-Cj0KCQiA_NC9BhCkARIsABSnSTa3Mft-hJZUGZTNmrAG3FNacbrdzt9ME92Uvu8GkAhfNYXAeGEyragaAp-EEALw_wcB&gad_source=1&gclid=Cj0KCQiA_NC9BhCkARIsABSnSTa3Mft-hJZUGZTNmrAG3FNacbrdzt9ME92Uvu8GkAhfNYXAeGEyragaAp-EEALw_wcB&gclsrc=aw.ds)
 
 #### USB Webcam
-![Logitech C920 HD Pro Webcam](image-1.png)
+![Logitech C920 HD Pro Webcam](res/image-1.png)
 [Logitech C920 HD Pro Webcam](https://www.logitech.com/en-gb/shop/p/c920-pro-hd-webcam.960-001055?srsltid=AfmBOoo3YtXhwlMyZrtsEMoOF_kX9aLfJYA74AU7-ibqodCde3_p4IT3)
 
 #### Microcontroller
 
-![BEAGLEBONE BLACK REV C AM3358BZCZ](image-2.png)
+![BEAGLEBONE BLACK REV C AM3358BZCZ](res/image-2.png)
 [BEAGLEBONE BLACK REV C AM3358BZCZ](https://www.digikey.com/en/products/detail/beagleboard/102110420/12719590?gclsrc=aw.ds&&utm_adgroup=&utm_source=google&utm_medium=cpc&utm_campaign=PMax%20Shopping_Product_Low%20ROAS%20Categories&utm_term=&utm_content=&utm_id=go_cmp-20243063506_adg-_ad-__dev-c_ext-_prd-12719590_sig-Cj0KCQiA_NC9BhCkARIsABSnSTYeo1pHZ67JWYJ_gNBy_bwLFCzQDgBF9kHc5uaEm_IufTvNotNPn6IaAuHvEALw_wcB&gad_source=1&gclid=Cj0KCQiA_NC9BhCkARIsABSnSTYeo1pHZ67JWYJ_gNBy_bwLFCzQDgBF9kHc5uaEm_IufTvNotNPn6IaAuHvEALw_wcB&gclsrc=aw.ds)
 
 ### Assembled Components
-![Assembled System](image-3.png)
+![Assembled System](res/image-3.png)
 
 # Source Code and System Design
 
