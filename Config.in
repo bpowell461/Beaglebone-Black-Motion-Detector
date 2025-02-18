@@ -1,1 +1,1 @@
-source "$BR2_EXTERNAL_project_base_PATH/package/detector/Config.in"
+source "$BR2_EXTERNAL_MDETECTOR_PATH/package/detector/Config.in"

@@ -1,7 +1,2 @@
-# Include the detector package
-ifeq ($(BR2_PACKAGE_DETECTOR),y)
-PACKAGES += detector
-endif
+include $(sort $(wildcard $(BR2_EXTERNAL_MDETECTOR_PATH)/package/*/*.mk))
 
-# Define the directory for the detector package
-detector_DIR = $(BR2_EXTERNAL)/package/detector
