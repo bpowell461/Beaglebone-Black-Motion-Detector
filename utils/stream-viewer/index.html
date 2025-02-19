@@ -8,5 +8,14 @@
 <body>
     <h1>MJPEG Stream Viewer</h1>
     <img src="http://localhost:8080" alt="MJPEG Stream" id="mjpeg-stream">
+    <script>
+        const img = document.getElementById('mjpeg-stream');
+        const refreshInterval = 5000; // Refresh every 5 seconds
+
+        setInterval(() => {
+            const timestamp = new Date().getTime();
+            img.src = `http://localhost:8080?timestamp=${timestamp}`;
+        }, refreshInterval);
+    </script>
 </body>
 </html>

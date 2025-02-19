@@ -1,6 +1,7 @@
 const dgram = require('dgram');
 const http = require('http');
 const { Buffer } = require('buffer');
+const { Transform, Readable } = require('stream');
 
 const BEAGLEBONE_IP = '192.168.7.1';
 const BEAGLEBONE_PORT = 5555;
@@ -8,27 +9,37 @@ const LOCAL_PORT = 3000;
 
 const server = dgram.createSocket('udp4');
 
-let frameQueue = [];
-let frameBuffer = Buffer.alloc(0);
-
 const startMarker = Buffer.from([0xFF, 0xD8]);
 const endMarker = Buffer.from([0xFF, 0xD9]);
 
-server.on('message', (msg) => {
-    // Append the incoming message to the frame buffer
-    frameBuffer = Buffer.concat([frameBuffer, msg]);
-
-    let startMarkerIndex, endMarkerIndex;
-
-    while ((startMarkerIndex = frameBuffer.indexOf(startMarker)) !== -1 && 
-           (endMarkerIndex = frameBuffer.indexOf(endMarker, startMarkerIndex)) !== -1) {
-        // Extract the complete frame
-        const completeFrame = frameBuffer.slice(startMarkerIndex, endMarkerIndex + endMarker.length);
-        frameQueue.push(completeFrame);
-
-        // Remove the complete frame from the buffer
-        frameBuffer = frameBuffer.slice(endMarkerIndex + endMarker.length);
+class FrameTransform extends Transform {
+    constructor() {
+        super();
+        this.frameBuffer = Buffer.alloc(0);
     }
+
+    _transform(chunk, encoding, callback) {
+        this.frameBuffer = Buffer.concat([this.frameBuffer, chunk]);
+
+        let startMarkerIndex, endMarkerIndex;
+
+        while ((startMarkerIndex = this.frameBuffer.indexOf(startMarker)) !== -1 &&
+               (endMarkerIndex = this.frameBuffer.indexOf(endMarker, startMarkerIndex)) !== -1) {
+            const completeFrame = this.frameBuffer.slice(startMarkerIndex, endMarkerIndex + endMarker.length);
+            this.push(completeFrame);
+
+            this.frameBuffer = this.frameBuffer.slice(endMarkerIndex + endMarker.length);
+        }
+
+        callback();
+    }
+}
+
+const frameTransform = new FrameTransform();
+frameTransform.setMaxListeners(0); // Remove the limit on the number of listeners
+
+server.on('message', (msg) => {
+    frameTransform.write(msg);
 });
 
 server.on('listening', () => {
@@ -46,19 +57,27 @@ const httpServer = http.createServer((req, res) => {
         'Pragma': 'no-cache'
     });
 
-    const sendFrame = () => {
-        if (frameQueue.length > 0) {
-            const mjpegData = frameQueue.shift();
-            res.write(`--myboundary\r\n`);
-            res.write(`Content-Type: image/jpeg\r\n`);
-            res.write(`Content-Length: ${mjpegData.length}\r\n\r\n`);
-            res.write(mjpegData);
-            res.write('\r\n');
-        }
+    const frameStream = new Readable({
+        read() {}
+    });
+
+    const onData = (frame) => {
+        frameStream.push(`--myboundary\r\n`);
+        frameStream.push(`Content-Type: image/jpeg\r\n`);
+        frameStream.push(`Content-Length: ${frame.length}\r\n\r\n`);
+        frameStream.push(frame);
+        frameStream.push('\r\n');
     };
 
-    // Use setInterval to repeatedly call sendFrame based on the frame rate
-    setInterval(sendFrame, 30);
+    frameTransform.on('data', onData);
+
+    frameStream.pipe(res);
+
+    req.on('close', () => {
+        frameStream.unpipe(res);
+        frameStream.destroy();
+        frameTransform.removeListener('data', onData);
+    });
 });
 
 httpServer.listen(8080, () => {
